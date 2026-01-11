@@ -214,7 +214,6 @@ import { Button } from "@/Components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import Badge from "@/Components/Badge.vue";
 
-const page = usePage();
 const props = defineProps<{
   job?: any;
 }>();
@@ -227,6 +226,33 @@ const job = computed<Job>(() => {
         ? JSON.parse(props.job.tags || "[]")
         : props.job.tags || [];
 
+    // Handle category - can be string or object
+    let categoryName = props.job.category;
+    if (typeof props.job.category === "object" && props.job.category?.name) {
+      categoryName = props.job.category.name;
+    }
+
+    // Handle postedBy - can be object or need to construct
+    let postedBy = props.job.postedBy;
+    if (!postedBy && props.job.user_id) {
+      postedBy = {
+        id: props.job.user_id?.toString() || "1",
+        name: "User",
+        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+        rating: 4.8,
+      };
+    } else if (postedBy && typeof postedBy === "object") {
+      // Ensure postedBy has all required fields
+      postedBy = {
+        id: postedBy.id?.toString() || props.job.user_id?.toString() || "1",
+        name: postedBy.name || "User",
+        avatar:
+          postedBy.avatar ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(postedBy.name || "User")}&background=random`,
+        rating: postedBy.rating || 4.8,
+      };
+    }
+
     return {
       id: props.job.id.toString(),
       title: props.job.title,
@@ -237,16 +263,16 @@ const job = computed<Job>(() => {
         currency: "USD",
       },
       type: props.job.type,
-      category: props.job.category,
+      category: categoryName || "General",
       tags: tags,
-      postedDate: new Date(props.job.created_at),
-      postedBy: props.job.postedBy || {
-        id: props.job.user_id?.toString() || "1",
+      postedDate: new Date(props.job.created_at || props.job.createdAt || new Date()),
+      postedBy: postedBy || {
+        id: "1",
         name: "User",
         avatar: `https://ui-avatars.com/api/?name=User&background=random`,
         rating: 4.8,
       },
-      applicants: props.job.applicants_count || 0,
+      applicants: props.job.applicants_count || props.job.applicants || 0,
       featured: props.job.featured || false,
     };
   }

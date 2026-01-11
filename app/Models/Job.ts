@@ -1,5 +1,6 @@
 import { Model } from "jcc-express-mvc/Eloquent";
 import { User } from "./User";
+import { Category } from "./Category";
 
 export class Job extends Model {
   protected fillable: string[] = [
@@ -26,7 +27,12 @@ export class Job extends Model {
   };
 
   // Relationship to user
-  user() {
+  postedBy() {
     return this.belongsTo(User, "user_id");
+  }
+
+  // Relationship to category
+  category() {
+    return this.belongsTo(Category, "category_id");
   }
 }

@@ -296,34 +296,93 @@ const itemsPerPage = props.meta?.limit || 12;
 
 // Transform backend jobs to frontend format
 const transformJob = (job: any) => {
-  const tags = typeof job.tags === 'string' ? JSON.parse(job.tags || '[]') : (job.tags || []);
-  return {
-    id: job.id.toString(),
-    title: job.title,
-    description: job.description,
-    budget: {
-      min: parseFloat(job.budget_min || 0),
-      max: parseFloat(job.budget_max || 0),
-      currency: "USD",
-    },
-    type: job.type,
-    category: job.category,
-    tags: tags,
-    postedDate: new Date(job.created_at),
-    postedBy: {
-      id: job.user_id?.toString() || "1",
-      name: "User",
-      avatar: `https://ui-avatars.com/api/?name=User&background=random`,
-      rating: 4.8,
-    },
-    applicants: job.applicants_count || 0,
-    featured: job.featured || false,
-  };
+  if (!job || !job.id) {
+    return null;
+  }
+
+  try {
+    // Parse tags safely
+    let tags: string[] = [];
+    if (job.tags) {
+      if (typeof job.tags === "string") {
+        try {
+          tags = JSON.parse(job.tags || "[]");
+        } catch {
+          tags = [];
+        }
+      } else if (Array.isArray(job.tags)) {
+        tags = job.tags;
+      }
+    }
+
+    // Handle category - can be string or object
+    let categoryName = "General";
+    if (job.category) {
+      if (typeof job.category === "string") {
+        categoryName = job.category;
+      } else if (typeof job.category === "object" && job.category?.name) {
+        categoryName = job.category.name;
+      }
+    }
+
+    // Handle postedBy - can be object or need to construct
+    let postedBy = job.postedBy || job.posted_by;
+    if (!postedBy && job.user_id) {
+      postedBy = {
+        id: job.user_id?.toString() || "1",
+        name: "User",
+        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+        rating: 4.8,
+      };
+    } else if (postedBy && typeof postedBy === "object") {
+      // Ensure postedBy has all required fields
+      const name = postedBy.name || "User";
+      postedBy = {
+        id: postedBy.id?.toString() || job.user_id?.toString() || "1",
+        name: name,
+        avatar:
+          postedBy.avatar ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        rating: postedBy.rating || 4.8,
+      };
+    }
+
+    return {
+      id: job.id.toString(),
+      title: job.title || "Untitled Job",
+      description: job.description || "",
+      budget: {
+        min: parseFloat(job.budget_min || 0),
+        max: parseFloat(job.budget_max || 0),
+        currency: "USD",
+      },
+      type: job.type || "fixed",
+      category: categoryName,
+      tags: tags,
+      postedDate: new Date(job.created_at || job.createdAt || new Date()),
+      postedBy: postedBy || {
+        id: "1",
+        name: "User",
+        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+        rating: 4.8,
+      },
+      applicants: job.applicants_count || job.applicants || 0,
+      featured: job.featured || false,
+    };
+  } catch (error) {
+    console.error("Error transforming job:", error, job);
+    return null;
+  }
 };
 
 // Use jobs from props or fallback to empty array
 const jobsData = computed(() => {
-  return (props.jobs || []).map(transformJob);
+  if (!props.jobs || !Array.isArray(props.jobs)) {
+    return [];
+  }
+  return props.jobs
+    .map(transformJob)
+    .filter((job): job is NonNullable<typeof job> => job !== null);
 });
 
 // Computed filters
@@ -332,7 +391,7 @@ const filteredJobs = computed(() => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       job.description.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      job.tags.some((tag) =>
+      job.tags.some((tag: string) =>
         tag.toLowerCase().includes(searchQuery.value.toLowerCase()),
       );
 
@@ -363,6 +422,11 @@ const filteredJobs = computed(() => {
   });
 });
 
+// Check if we're using backend filtering (when filters trigger reload)
+const usingBackendFilter = computed(() => {
+  return searchQuery.value || selectedCategory.value || selectedJobType.value;
+});
+
 // Pagination - use backend pagination if available
 const totalPages = computed(() => {
   if (props.meta?.totalPages) {
@@ -372,11 +436,13 @@ const totalPages = computed(() => {
 });
 
 const paginatedJobs = computed(() => {
-  // If we have backend pagination, use filtered jobs directly
-  if (props.meta) {
-    return filteredJobs.value;
+  // If we have backend pagination and we're using backend filters, use jobs directly
+  if (props.meta && usingBackendFilter.value) {
+    // Backend has already filtered and paginated, just use the jobs
+    return jobsData.value;
   }
-  // Otherwise, do client-side pagination
+
+  // Client-side filtering and pagination (for budget filter and initial load)
   const startIndex = (currentPage.value - 1) * itemsPerPage;
   return filteredJobs.value.slice(startIndex, startIndex + itemsPerPage);
 });
@@ -388,6 +454,7 @@ const resetFilters = () => {
   selectedJobType.value = "";
   selectedBudgetRange.value = "";
   currentPage.value = 1;
+  reloadJobs();
 };
 
 // Watch for filter changes to reset pagination and reload
@@ -401,11 +468,11 @@ const reloadJobs = () => {
   const params: any = {
     page: currentPage.value,
   };
-  
+
   if (searchQuery.value) params.search = searchQuery.value;
   if (selectedCategory.value) params.category = selectedCategory.value;
   if (selectedJobType.value) params.type = selectedJobType.value;
-  
+
   router.get("/jobs", params, {
     preserveState: true,
     preserveScroll: true,

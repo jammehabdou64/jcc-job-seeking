@@ -1,92 +1,32 @@
 import { httpContext } from "jcc-express-mvc";
 import { Inject, Method } from "jcc-express-mvc/Core/Dependency";
-import { Builder } from "jcc-express-mvc/Eloquent/Builder";
 import { JobRequest } from "@/Request/JobRequest";
 import { Job } from "@/Model/Job";
-import { User } from "@/Model/User";
+import { JobRepository } from "app/Repository/JobRepository";
 
 @Inject()
 export class JobController {
+  constructor(private jobRepository: JobRepository) {}
+
   @Method()
   async index({ req, res } = httpContext) {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const category = req.query.category as string;
-    const type = req.query.type as string;
-    const search = req.query.search as string;
-
-    let query = Job.query();
-
-    return Job.paginate(req);
-
-    // Apply filters
-    // if (category) {
-    //   query = query.where("category", category);
-    // }
-
-    if (type) {
-      query = query.where("type", type);
-    }
-
-    if (search) {
-      query = query.where((q: Builder) => {
-        q.where("title", "like", `%${search}%`).orWhere(
-          "description",
-          "like",
-          `%${search}%`,
-        );
-      });
-    }
-
-    // Only show active jobs for public listing
-    query = query.where("status", "active");
-
-    const jobs = await query
-      .latest("created_at")
-      .limit(limit)
-      .offset((page - 1) * limit)
-      .get();
-
-    const total = await query.count();
-
-    return res.json({
-      data: jobs,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+    const result = await this.jobRepository.getJobs(req);
+    //
+    return res.inertia("Jobs/JobListings", {
+      jobs: result.data || [],
+      meta: result.meta || {},
     });
   }
 
   @Method()
   async show(job: Job, { req, res } = httpContext) {
     if (!job) {
-      return res.status(404).json({ message: "Job not found" });
+      return res.redirect("/jobs");
     }
 
-    // Increment views
-    await Job.where("id", job.id).update({
-      views_count: (job.views_count || 0) + 1,
+    return res.inertia("Jobs/JobDetail", {
+      job: await this.jobRepository.showJob(job),
     });
-
-    // Load user relationship
-    const user = (await User.find(job.user_id)) as Record<string, any>;
-    const jobData = {
-      ...job,
-      postedBy: user
-        ? {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`,
-            rating: 4.8, // This would come from a ratings table in a real app
-          }
-        : null,
-    };
-
-    return res.json({ data: jobData });
   }
 
   @Method()
@@ -107,14 +47,15 @@ export class JobController {
 
   @Method()
   async update({ req, res } = httpContext) {
-    const job = (await Job.find(req.params.id)) as Record<string, any>;
+    const job = await Job.find(req.params.id);
 
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
 
+    const jobData = job as any;
     // Check if user owns the job
-    if (job.user_id !== req.user?.id) {
+    if (jobData.user_id !== req.user?.id) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
@@ -136,9 +77,9 @@ export class JobController {
       updateData.featured = req.body.featured;
     if (req.body.status) updateData.status = req.body.status;
 
-    await Job.where("id", job.id).update(updateData);
+    await Job.where("id", jobData.id).update(updateData);
 
-    const updatedJob = await Job.find(job.id);
+    const updatedJob = await Job.find(jobData.id);
 
     return res.json({
       message: "Job updated successfully",
@@ -148,18 +89,19 @@ export class JobController {
 
   @Method()
   async destroy({ req, res } = httpContext) {
-    const job = (await Job.find(req.params.id)) as Record<string, any>;
+    const job = await Job.find(req.params.id);
 
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
 
+    const jobData = job as any;
     // Check if user owns the job
-    if (job.user_id !== req.user?.id) {
+    if (jobData.user_id !== req.user?.id) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    await Job.where("id", job.id).delete();
+    await Job.where("id", jobData.id).delete();
 
     return res.json({ message: "Job deleted successfully" });
   }
@@ -175,5 +117,13 @@ export class JobController {
       .get();
 
     return res.json({ data: jobs });
+  }
+
+  incrementViews(job: any) {
+    return true;
+    // job.views_count = (job.views_count || 0) + 1;
+    // return Job.where("id", job.id).update({
+    //   views_count: (job.views_count || 0) + 1,
+    // });
   }
 }
