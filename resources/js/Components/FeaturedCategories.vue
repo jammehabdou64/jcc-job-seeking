@@ -32,14 +32,17 @@
   </section>
 </template>
 
-<script setup="ts">
+<script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
-const props = defineProps({
-  jobCategories: {
-    types: Array,
-    required: true,
-  },
-});
 
-console.log({ p: props.jobCategories });
+interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  jobCount: number;
+}
+
+const props = defineProps<{
+  jobCategories: Category[];
+}>();
 </script>

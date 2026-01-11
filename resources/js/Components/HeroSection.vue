@@ -102,4 +102,8 @@
     </div>
   </section>
 </template>
-<script setup="ts"></script>
+<script setup lang="ts">
+import { Link } from "@inertiajs/vue3";
+import Button from "./Button.vue";
+import Badge from "./Badge.vue";
+</script>

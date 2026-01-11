@@ -6,6 +6,7 @@ export class Migration {
       table.string("name");
       table.string("email").unique();
       table.string("password");
+      table.enum("role", ["admin", "employer", "employee"]).default("employee");
       table.timestamps();
       table.softDeletes();
     });

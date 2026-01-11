@@ -229,7 +229,7 @@
         <div class="space-y-4">
           <div
             v-for="application in applications"
-            :key="application.id"
+            :key="application.id || Math.random()"
             class="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-md transition-all"
           >
             <div class="flex items-start justify-between gap-4 mb-4">
@@ -342,95 +342,64 @@ import Badge from "@/Components/Badge.vue";
 import Navbar from "@/Components/Navbar.vue";
 import Footer from "@/Components/Footer.vue";
 
+const props = defineProps<{
+  myJobs?: any[];
+  applications?: any[];
+}>();
+
 // Tab state
 const activeTab = ref<"jobs" | "applications" | "saved">("jobs");
 
-// Mock data for dashboard
-const myJobs = [
-  {
-    ...jobsData[0],
-    id: "my-1",
-    status: "active" as const,
-    createdDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    viewCount: 247,
-  },
-  {
-    ...jobsData[1],
-    id: "my-2",
-    status: "active" as const,
-    createdDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    viewCount: 189,
-  },
-  {
-    ...jobsData[3],
-    id: "my-3",
-    status: "closed" as const,
-    createdDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-    viewCount: 412,
-  },
-];
-
-const applications = [
-  {
-    id: "app-1",
-    jobId: "1",
-    jobTitle: "Build React Dashboard with D3 Charts",
-    freelancer: {
-      name: "Alex Johnson",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+// Transform backend jobs to frontend format
+const transformJob = (job: any) => {
+  const tags = typeof job.tags === 'string' ? JSON.parse(job.tags || '[]') : (job.tags || []);
+  return {
+    id: job.id.toString(),
+    title: job.title,
+    description: job.description,
+    budget: {
+      min: parseFloat(job.budget_min || 0),
+      max: parseFloat(job.budget_max || 0),
+      currency: "USD",
+    },
+    type: job.type,
+    category: job.category,
+    tags: tags,
+    postedDate: new Date(job.created_at),
+    postedBy: {
+      id: job.user_id?.toString() || "1",
+      name: "User",
+      avatar: `https://ui-avatars.com/api/?name=User&background=random`,
       rating: 4.8,
-      jobsCompleted: 42,
     },
-    bidAmount: 4200,
-    message:
-      "I have 5 years of React experience and I've built multiple D3-based dashboards. Your project is exactly in my wheelhouse. I can deliver in 3 weeks.",
-    appliedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    status: "pending" as const,
-  },
-  {
-    id: "app-2",
-    jobId: "1",
-    jobTitle: "Build React Dashboard with D3 Charts",
-    freelancer: {
-      name: "Sarah Chen",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-      rating: 4.9,
-      jobsCompleted: 67,
-    },
-    bidAmount: 4800,
-    message:
-      "Expert in React and D3. Check my portfolio for similar projects. Ready to start immediately.",
-    appliedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    status: "pending" as const,
-  },
-  {
-    id: "app-3",
-    jobId: "2",
-    jobTitle: "Vue 3 E-Commerce Platform Frontend",
-    freelancer: {
-      name: "Marcus Wilson",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-      rating: 4.7,
-      jobsCompleted: 38,
-    },
-    bidAmount: 5500,
-    message:
-      "Vue 3 specialist with Tailwind expertise. Perfect for your e-commerce project.",
-    appliedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    status: "accepted" as const,
-  },
-];
+    applicants: job.applicants_count || 0,
+    featured: job.featured || false,
+    status: job.status || "active",
+    createdDate: new Date(job.created_at),
+    viewCount: job.views_count || 0,
+  };
+};
 
-const savedJobs = [jobsData[2], jobsData[4], jobsData[6]];
+// Transform backend jobs
+const myJobs = computed(() => {
+  return (props.myJobs || []).map(transformJob);
+});
+
+const applications = computed(() => {
+  return props.applications || [];
+});
+
+const savedJobs = computed(() => {
+  // For now, use mock data for saved jobs
+  // In the future, this would come from a saved_jobs table
+  return [jobsData[2], jobsData[4], jobsData[6]];
+});
 
 // Stats
 const stats = computed(() => {
-  const activeJobCount = myJobs.filter((j) => j.status === "active").length;
-  const totalApplications = applications.length;
-  const totalViews = myJobs.reduce((sum, job) => sum + (job.viewCount || 0), 0);
+  const activeJobCount = myJobs.value.filter((j) => j.status === "active").length;
+  const totalApplications = applications.value.length;
+  const totalViews = myJobs.value.reduce((sum, job) => sum + (job.viewCount || 0), 0);
   const avgRating = 4.8;
 
   return [

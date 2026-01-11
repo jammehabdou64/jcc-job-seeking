@@ -15,4 +15,8 @@ Route.middleware("guest").get("/register", (req, res) =>
   res.inertia("Auth/Register"),
 );
 
+Route.middleware("guest").get("/forgot-password", (req, res) =>
+  res.inertia("Auth/ForgotPassword"),
+);
+
 Route.get("/logout", Auth.logout);

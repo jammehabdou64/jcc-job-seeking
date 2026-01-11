@@ -44,7 +44,8 @@
               >
               <input
                 v-model="searchQuery"
-                @input="handleFilterChange"
+                @keyup.enter="handleFilterChange"
+                @blur="handleFilterChange"
                 type="text"
                 placeholder="Job title, skill, tag..."
                 class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
@@ -227,7 +228,7 @@
           >
             <button
               v-if="currentPage > 1"
-              @click="currentPage--"
+              @click="goToPage(currentPage - 1)"
               class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
             >
               ← Previous
@@ -235,23 +236,23 @@
 
             <div class="flex gap-2">
               <button
-                v-for="page in totalPages"
-                :key="page"
-                @click="currentPage = page"
+                v-for="pageNum in Math.min(totalPages, 10)"
+                :key="pageNum"
+                @click="goToPage(pageNum)"
                 :class="[
                   'px-3 py-2 rounded-lg transition-colors',
-                  page === currentPage
+                  pageNum === currentPage
                     ? 'bg-primary-500 text-white'
                     : 'border border-slate-300 text-slate-700 hover:bg-slate-100',
                 ]"
               >
-                {{ page }}
+                {{ pageNum }}
               </button>
             </div>
 
             <button
               v-if="currentPage < totalPages"
-              @click="currentPage++"
+              @click="goToPage(currentPage + 1)"
               class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
             >
               Next →
@@ -265,25 +266,69 @@
   <Footer />
 </template>
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { jobsData, jobCategories } from "@/data/jobs";
+import { ref, computed, onMounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
+import { jobCategories } from "@/data/jobs";
 import JobCard from "@/Components/JobCard.vue";
 import Badge from "@/Components/Badge.vue";
 import Button from "@/Components/Button.vue";
 import Navbar from "@/Components/Navbar.vue";
 import Footer from "@/Components/Footer.vue";
 
+const page = usePage();
+const props = defineProps<{
+  jobs?: any[];
+  meta?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}>();
+
 // State
 const searchQuery = ref("");
 const selectedCategory = ref<string>("");
 const selectedJobType = ref<string>("");
 const selectedBudgetRange = ref<string>("");
-const currentPage = ref(1);
-const itemsPerPage = 6;
+const currentPage = ref(props.meta?.page || 1);
+const itemsPerPage = props.meta?.limit || 12;
+
+// Transform backend jobs to frontend format
+const transformJob = (job: any) => {
+  const tags = typeof job.tags === 'string' ? JSON.parse(job.tags || '[]') : (job.tags || []);
+  return {
+    id: job.id.toString(),
+    title: job.title,
+    description: job.description,
+    budget: {
+      min: parseFloat(job.budget_min || 0),
+      max: parseFloat(job.budget_max || 0),
+      currency: "USD",
+    },
+    type: job.type,
+    category: job.category,
+    tags: tags,
+    postedDate: new Date(job.created_at),
+    postedBy: {
+      id: job.user_id?.toString() || "1",
+      name: "User",
+      avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+      rating: 4.8,
+    },
+    applicants: job.applicants_count || 0,
+    featured: job.featured || false,
+  };
+};
+
+// Use jobs from props or fallback to empty array
+const jobsData = computed(() => {
+  return (props.jobs || []).map(transformJob);
+});
 
 // Computed filters
 const filteredJobs = computed(() => {
-  return jobsData.filter((job) => {
+  return jobsData.value.filter((job) => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       job.description.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -318,12 +363,20 @@ const filteredJobs = computed(() => {
   });
 });
 
-// Pagination
-const totalPages = computed(() =>
-  Math.ceil(filteredJobs.value.length / itemsPerPage),
-);
+// Pagination - use backend pagination if available
+const totalPages = computed(() => {
+  if (props.meta?.totalPages) {
+    return props.meta.totalPages;
+  }
+  return Math.ceil(filteredJobs.value.length / itemsPerPage);
+});
 
 const paginatedJobs = computed(() => {
+  // If we have backend pagination, use filtered jobs directly
+  if (props.meta) {
+    return filteredJobs.value;
+  }
+  // Otherwise, do client-side pagination
   const startIndex = (currentPage.value - 1) * itemsPerPage;
   return filteredJobs.value.slice(startIndex, startIndex + itemsPerPage);
 });
@@ -337,9 +390,26 @@ const resetFilters = () => {
   currentPage.value = 1;
 };
 
-// Watch for filter changes to reset pagination
+// Watch for filter changes to reset pagination and reload
 const handleFilterChange = () => {
   currentPage.value = 1;
+  reloadJobs();
+};
+
+// Reload jobs with filters
+const reloadJobs = () => {
+  const params: any = {
+    page: currentPage.value,
+  };
+  
+  if (searchQuery.value) params.search = searchQuery.value;
+  if (selectedCategory.value) params.category = selectedCategory.value;
+  if (selectedJobType.value) params.type = selectedJobType.value;
+  
+  router.get("/jobs", params, {
+    preserveState: true,
+    preserveScroll: true,
+  });
 };
 
 // Category filter handlers
@@ -356,5 +426,11 @@ const setJobTypeFilter = (jobType: string) => {
 const setBudgetFilter = (budget: string) => {
   selectedBudgetRange.value = budget;
   handleFilterChange();
+};
+
+// Handle pagination
+const goToPage = (page: number) => {
+  currentPage.value = page;
+  reloadJobs();
 };
 </script>

@@ -1,6 +1,6 @@
 <template>
   <Link
-    :href="`/job/${job.id}`"
+    :href="`/jobs/${job.id}`"
     class="block bg-white border border-slate-200 rounded-xl p-6 hover:shadow-lg hover:border-primary-300 transition-all duration-300 group"
   >
     <!-- Featured badge -->

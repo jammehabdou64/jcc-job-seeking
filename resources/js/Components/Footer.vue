@@ -31,12 +31,12 @@
               </Link>
             </li>
             <li>
-              <RouterLink
+              <Link
                 href="/dashboard"
                 class="text-slate-400 hover:text-white transition-colors"
               >
                 Dashboard
-              </RouterLink>
+              </Link>
             </li>
             <li>
               <a
@@ -60,12 +60,12 @@
           <h3 class="text-white font-semibold mb-4">For Employers</h3>
           <ul class="space-y-2">
             <li>
-              <RouterLink
+              <Link
                 href="/post-job"
                 class="text-slate-400 hover:text-white transition-colors"
               >
                 Post a Job
-              </RouterLink>
+              </Link>
             </li>
             <li>
               <a
