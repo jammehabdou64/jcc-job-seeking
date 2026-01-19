@@ -2,6 +2,8 @@ import { FormRequest } from "jcc-express-mvc/Core/FormRequest";
 import { ValidationException } from "jcc-express-mvc/lib/Error/ValidationException";
 import { Request } from "jcc-express-mvc";
 import { Job } from "@/Model/Job";
+import { Category } from "@/Model/Category";
+import { JobInterface } from "@/Model/Interface";
 
 export class JobRequest extends FormRequest {
   constructor(req: Request) {
@@ -38,18 +40,36 @@ export class JobRequest extends FormRequest {
           .filter((tag: string) => tag.length > 0)
       : [];
 
-    return Job.create({
-      user_id: this.req.user?.id,
-      title: this.input("title"),
-      description: this.input("description"),
-      category: this.input("category"),
-      type: this.input("type"),
-      budget_min: parseFloat(this.input("budgetMin")),
-      budget_max: parseFloat(this.input("budgetMax")),
-      tags: JSON.stringify(tags),
-      featured:
-        this.input("featured") === "true" || this.input("featured") === true,
-      status: "active",
-    });
+    // Look up category by name if category is a string, otherwise use as ID
+    let categoryId = this.input("category");
+    if (typeof categoryId === "string" && isNaN(Number(categoryId))) {
+      const category = await Category.where("name", categoryId).first();
+      if (category) {
+        categoryId = (category as any).id;
+      } else {
+        throw new ValidationException(
+          { category: "Category not found" },
+          this.req,
+        );
+      }
+    }
+
+    const job: JobInterface = this.route("job")
+      ? await Job.find(this.route("job"))
+      : (new Job() as any);
+
+    job.user_id = this.req.user?.id;
+    job.title = this.input("title");
+    job.description = this.input("description");
+    job.category_id = categoryId;
+    job.type = this.input("type");
+    job.budget_min = parseFloat(this.input("budgetMin"));
+    job.budget_max = parseFloat(this.input("budgetMax"));
+    job.tags = JSON.stringify(tags);
+    job.featured =
+      this.input("featured") === "true" || this.input("featured") === true;
+    job.status = "active";
+
+    return job.save();
   }
 }

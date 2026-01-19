@@ -227,9 +227,13 @@ const job = computed<Job>(() => {
         : props.job.tags || [];
 
     // Handle category - can be string or object
-    let categoryName = props.job.category;
-    if (typeof props.job.category === "object" && props.job.category?.name) {
-      categoryName = props.job.category.name;
+    let categoryName = "General";
+    if (props.job.category) {
+      if (typeof props.job.category === "string") {
+        categoryName = props.job.category;
+      } else if (typeof props.job.category === "object" && props.job.category?.name) {
+        categoryName = props.job.category.name;
+      }
     }
 
     // Handle postedBy - can be object or need to construct

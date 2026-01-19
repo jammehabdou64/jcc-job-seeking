@@ -7,22 +7,7 @@ Route.middleware("guest").get("/", (req, res) => {
   return res.inertia("Index");
 });
 
-Route.get("/dashboard", async (req, res) => {
-  // Get user's jobs if authenticated
-  let myJobs: any[] = [];
-  let applications: any[] = [];
-
-  if (req.user) {
-    myJobs = await Job.where("user_id", req.user.id)
-      .orderBy("created_at", "desc")
-      .get();
-  }
-
-  return res.inertia("Dashboard", {
-    myJobs: myJobs || [],
-    applications: applications || [],
-  });
-});
+Route.get("/dashboard", [JobController, "myJobs"]);
 
 Route.prefix("/jobs")
   .controller(JobController)

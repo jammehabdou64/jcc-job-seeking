@@ -197,7 +197,7 @@
 </template>
 
 <script setup lang="ts">
-import { useForm, Head } from "@inertiajs/vue3";
+import { useForm, Head, router } from "@inertiajs/vue3";
 import { jobCategories } from "@/data/jobs";
 import Navbar from "@/Components/Navbar.vue";
 import Footer from "@/Components/Footer.vue";
@@ -226,11 +226,8 @@ const form = useForm({
 
 const submit = () => {
   form.post("/api/jobs", {
-    onSuccess: (page) => {
-      // Redirect to dashboard on success
-      form.reset();
-      window.location.href = "/dashboard";
-    },
+    // Controller will handle redirect to dashboard
+    // Don't manually redirect to avoid duplicate requests
     onError: (errors) => {
       console.error("Validation errors:", errors);
     },

@@ -45,7 +45,6 @@
               <input
                 v-model="searchQuery"
                 @keyup.enter="handleFilterChange"
-                @blur="handleFilterChange"
                 type="text"
                 placeholder="Job title, skill, tag..."
                 class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
@@ -293,6 +292,7 @@ const selectedJobType = ref<string>("");
 const selectedBudgetRange = ref<string>("");
 const currentPage = ref(props.meta?.page || 1);
 const itemsPerPage = props.meta?.limit || 12;
+const isLoading = ref(false);
 
 // Transform backend jobs to frontend format
 const transformJob = (job: any) => {
@@ -465,6 +465,11 @@ const handleFilterChange = () => {
 
 // Reload jobs with filters
 const reloadJobs = () => {
+  // Prevent duplicate requests
+  if (isLoading.value) {
+    return;
+  }
+
   const params: any = {
     page: currentPage.value,
   };
@@ -473,9 +478,13 @@ const reloadJobs = () => {
   if (selectedCategory.value) params.category = selectedCategory.value;
   if (selectedJobType.value) params.type = selectedJobType.value;
 
+  isLoading.value = true;
   router.get("/jobs", params, {
     preserveState: true,
     preserveScroll: true,
+    onFinish: () => {
+      isLoading.value = false;
+    },
   });
 };
 
@@ -492,7 +501,8 @@ const setJobTypeFilter = (jobType: string) => {
 
 const setBudgetFilter = (budget: string) => {
   selectedBudgetRange.value = budget;
-  handleFilterChange();
+  // Budget filtering is client-side only, no need to reload from server
+  currentPage.value = 1;
 };
 
 // Handle pagination

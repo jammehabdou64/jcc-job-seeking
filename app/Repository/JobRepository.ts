@@ -1,7 +1,7 @@
 import { Job } from "@/Model/Job";
 import { Request } from "jcc-express-mvc";
 import { type Builder } from "jcc-express-mvc/Eloquent/Builder";
-
+import { JobInterface } from "@/Model/Interface";
 export class JobRepository {
   async getJobs(req: Request) {
     const category = req.query.category as string;
@@ -40,15 +40,22 @@ export class JobRepository {
   async showJob(job: Job) {
     job.load(["postedBy", "category"]);
     // Increment views
-    await this.incrementViews(job);
+    await this.incrementViews(job as any);
 
     return job;
   }
 
-  private async incrementViews(job: any) {
-    return true;
-    return job.update({
+  private async incrementViews(job: JobInterface) {
+    return  job.update({
       views_count: (job.views_count || 0) + 1,
     });
+  }
+
+
+  public async myJobs(authId: string) {
+    return Job.where("user_id", authId)
+      .with(["category", "postedBy"])
+      .latest()
+      .get();
   }
 }

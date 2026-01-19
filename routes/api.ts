@@ -17,8 +17,8 @@ Route.prefix("/jobs").group(() => {
   // Protected routes (require authentication)
   Route.middleware(["auth"]).group(() => {
     Route.post("/", [JobController, "store"]);
-    Route.put("/:id", [JobController, "update"]);
-    Route.delete("/:id", [JobController, "destroy"]);
+    Route.put("/{job}", [JobController, "update"]);
+    Route.delete("/{job}", [JobController, "destroy"]);
     Route.get("/my/jobs", [JobController, "myJobs"]);
   });
 });

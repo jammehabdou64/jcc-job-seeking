@@ -352,37 +352,92 @@ const activeTab = ref<"jobs" | "applications" | "saved">("jobs");
 
 // Transform backend jobs to frontend format
 const transformJob = (job: any) => {
-  const tags = typeof job.tags === 'string' ? JSON.parse(job.tags || '[]') : (job.tags || []);
-  return {
-    id: job.id.toString(),
-    title: job.title,
-    description: job.description,
-    budget: {
-      min: parseFloat(job.budget_min || 0),
-      max: parseFloat(job.budget_max || 0),
-      currency: "USD",
-    },
-    type: job.type,
-    category: job.category,
-    tags: tags,
-    postedDate: new Date(job.created_at),
-    postedBy: {
-      id: job.user_id?.toString() || "1",
-      name: "User",
-      avatar: `https://ui-avatars.com/api/?name=User&background=random`,
-      rating: 4.8,
-    },
-    applicants: job.applicants_count || 0,
-    featured: job.featured || false,
-    status: job.status || "active",
-    createdDate: new Date(job.created_at),
-    viewCount: job.views_count || 0,
-  };
+  if (!job || !job.id) {
+    return null;
+  }
+
+  try {
+    // Parse tags safely
+    let tags: string[] = [];
+    if (job.tags) {
+      if (typeof job.tags === "string") {
+        try {
+          tags = JSON.parse(job.tags || "[]");
+        } catch {
+          tags = [];
+        }
+      } else if (Array.isArray(job.tags)) {
+        tags = job.tags;
+      }
+    }
+
+    // Handle category - can be string or object
+    let categoryName = "General";
+    if (job.category) {
+      if (typeof job.category === "string") {
+        categoryName = job.category;
+      } else if (typeof job.category === "object" && job.category?.name) {
+        categoryName = job.category.name;
+      }
+    }
+
+    // Handle postedBy - can be object or need to construct
+    let postedBy = job.postedBy || job.posted_by;
+    if (!postedBy && job.user_id) {
+      postedBy = {
+        id: job.user_id?.toString() || "1",
+        name: "User",
+        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+        rating: 4.8,
+      };
+    } else if (postedBy && typeof postedBy === "object") {
+      const name = postedBy.name || "User";
+      postedBy = {
+        id: postedBy.id?.toString() || job.user_id?.toString() || "1",
+        name: name,
+        avatar:
+          postedBy.avatar ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        rating: postedBy.rating || 4.8,
+      };
+    }
+
+    return {
+      id: job.id.toString(),
+      title: job.title || "Untitled Job",
+      description: job.description || "",
+      budget: {
+        min: parseFloat(job.budget_min || 0),
+        max: parseFloat(job.budget_max || 0),
+        currency: "USD",
+      },
+      type: job.type || "fixed",
+      category: categoryName,
+      tags: tags,
+      postedDate: new Date(job.created_at || job.createdAt || new Date()),
+      postedBy: postedBy || {
+        id: "1",
+        name: "User",
+        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+        rating: 4.8,
+      },
+      applicants: job.applicants_count || job.applicants || 0,
+      featured: job.featured || false,
+      status: job.status || "active",
+      createdDate: new Date(job.created_at || job.createdAt || new Date()),
+      viewCount: job.views_count || 0,
+    };
+  } catch (error) {
+    console.error("Error transforming job:", error, job);
+    return null;
+  }
 };
 
 // Transform backend jobs
 const myJobs = computed(() => {
-  return (props.myJobs || []).map(transformJob);
+  return (props.myJobs || [])
+    .map(transformJob)
+    .filter((job): job is NonNullable<typeof job> => job !== null);
 });
 
 const applications = computed(() => {
