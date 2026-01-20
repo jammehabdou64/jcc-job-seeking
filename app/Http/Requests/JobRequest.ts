@@ -15,9 +15,9 @@ export class JobRequest extends FormRequest {
       title: ["required", "min:5", "max:200"],
       description: ["required", "min:50"],
       category: ["required"],
-      type: ["required", "in:fixed,hourly"],
-      budgetMin: ["required", "numeric", "min:0"],
-      budgetMax: ["required", "numeric", "min:0"],
+      type: ["required"],
+      // budgetMin: ["num", "min:0"],
+      // budgetMax: ["num", "min:0"],
       tags: ["nullable"],
     });
 
@@ -25,6 +25,7 @@ export class JobRequest extends FormRequest {
     const budgetMin = parseFloat(this.input("budgetMin") || "0");
     const budgetMax = parseFloat(this.input("budgetMax") || "0");
     if (budgetMax < budgetMin) {
+      console.log("budgetMax < budgetMin");
       throw new ValidationException(
         { budgetMax: "Maximum budget must be greater than minimum budget" },
         this.req,
@@ -65,7 +66,7 @@ export class JobRequest extends FormRequest {
     job.type = this.input("type");
     job.budget_min = parseFloat(this.input("budgetMin"));
     job.budget_max = parseFloat(this.input("budgetMax"));
-    job.tags = JSON.stringify(tags);
+    job.tags = tags;
     job.featured =
       this.input("featured") === "true" || this.input("featured") === true;
     job.status = "active";

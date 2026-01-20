@@ -36,15 +36,15 @@
                 size="md"
               />
             </div>
-            <p class="text-lg text-slate-600 mb-4">{{ job.category }}</p>
+            <p class="text-lg text-slate-600 mb-4">{{ job.category.name }}</p>
             <div class="flex items-center gap-6 text-sm text-slate-600">
               <div class="flex items-center gap-2">
                 <span class="text-lg">💰</span>
-                <span class="font-semibold">{{ budgetDisplay }}</span>
+                <span class="font-semibold">{{ job.budget_min }} - {{ job.budget_max }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-lg">📅</span>
-                <span>{{ postedTimeAgo }}</span>
+                <span>{{ job.created_at }}</span>
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-lg">📬</span>
@@ -66,7 +66,7 @@
 
         <!-- Action Buttons -->
         <div class="flex gap-4 pt-6 border-t border-slate-200">
-          <Button variant="primary" size="lg" class="flex-1">
+          <Button variant="default" size="lg" class="flex-1">
             Apply Now
           </Button>
           <Button variant="outline" size="lg">
@@ -133,7 +133,7 @@
               <div>
                 <p class="text-sm text-slate-600 mb-1">Budget</p>
                 <p class="text-lg font-semibold text-slate-900">
-                  {{ budgetDisplay }}
+                  {{ job.budget_min }} - {{ job.budget_max }}
                 </p>
               </div>
               <div>
@@ -145,13 +145,13 @@
               <div>
                 <p class="text-sm text-slate-600 mb-1">Category</p>
                 <p class="text-lg font-semibold text-slate-900">
-                  {{ job.category }}
+                  {{ job.category.name }}
                 </p>
               </div>
               <div>
                 <p class="text-sm text-slate-600 mb-1">Posted</p>
                 <p class="text-lg font-semibold text-slate-900">
-                  {{ postedTimeAgo }}
+                  {{ job.created_at }}
                 </p>
               </div>
               <div>
@@ -180,7 +180,7 @@
                     {{ job.postedBy.name }}
                   </p>
                   <div class="flex items-center gap-1 mt-1">
-                    <span
+                    <!-- <span
                       v-for="i in Math.floor(job.postedBy.rating)"
                       :key="i"
                       class="text-yellow-400"
@@ -188,7 +188,7 @@
                     >
                     <span class="text-sm text-slate-600 ml-1">
                       {{ job.postedBy.rating }}
-                    </span>
+                    </span> -->
                   </div>
                 </div>
               </div>
@@ -214,114 +214,114 @@ import { Button } from "@/Components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import Badge from "@/Components/Badge.vue";
 
-const props = defineProps<{
+const {job} = defineProps<{
   job?: any;
 }>();
 
 // Transform backend job to frontend format
-const job = computed<Job>(() => {
-  if (props.job) {
-    const tags =
-      typeof props.job.tags === "string"
-        ? JSON.parse(props.job.tags || "[]")
-        : props.job.tags || [];
+// const job = computed<Job>(() => {
+//   if (props.job) {
+//     const tags =
+//       typeof props.job.tags === "string"
+//         ? JSON.parse(props.job.tags || "[]")
+//         : props.job.tags || [];
 
-    // Handle category - can be string or object
-    let categoryName = "General";
-    if (props.job.category) {
-      if (typeof props.job.category === "string") {
-        categoryName = props.job.category;
-      } else if (typeof props.job.category === "object" && props.job.category?.name) {
-        categoryName = props.job.category.name;
-      }
-    }
+//     // Handle category - can be string or object
+//     let categoryName = "General";
+//     if (props.job.category) {
+//       if (typeof props.job.category === "string") {
+//         categoryName = props.job.category;
+//       } else if (typeof props.job.category === "object" && props.job.category?.name) {
+//         categoryName = props.job.category.name;
+//       }
+//     }
 
-    // Handle postedBy - can be object or need to construct
-    let postedBy = props.job.postedBy;
-    if (!postedBy && props.job.user_id) {
-      postedBy = {
-        id: props.job.user_id?.toString() || "1",
-        name: "User",
-        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
-        rating: 4.8,
-      };
-    } else if (postedBy && typeof postedBy === "object") {
-      // Ensure postedBy has all required fields
-      postedBy = {
-        id: postedBy.id?.toString() || props.job.user_id?.toString() || "1",
-        name: postedBy.name || "User",
-        avatar:
-          postedBy.avatar ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(postedBy.name || "User")}&background=random`,
-        rating: postedBy.rating || 4.8,
-      };
-    }
+//     // Handle postedBy - can be object or need to construct
+//     let postedBy = props.job.postedBy;
+//     if (!postedBy && props.job.user_id) {
+//       postedBy = {
+//         id: props.job.user_id?.toString() || "1",
+//         name: "User",
+//         avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+//         rating: 4.8,
+//       };
+//     } else if (postedBy && typeof postedBy === "object") {
+//       // Ensure postedBy has all required fields
+//       postedBy = {
+//         id: postedBy.id?.toString() || props.job.user_id?.toString() || "1",
+//         name: postedBy.name || "User",
+//         avatar:
+//           postedBy.avatar ||
+//           `https://ui-avatars.com/api/?name=${encodeURIComponent(postedBy.name || "User")}&background=random`,
+//         rating: postedBy.rating || 4.8,
+//       };
+//     }
 
-    return {
-      id: props.job.id.toString(),
-      title: props.job.title,
-      description: props.job.description,
-      budget: {
-        min: parseFloat(props.job.budget_min || 0),
-        max: parseFloat(props.job.budget_max || 0),
-        currency: "USD",
-      },
-      type: props.job.type,
-      category: categoryName || "General",
-      tags: tags,
-      postedDate: new Date(props.job.created_at || props.job.createdAt || new Date()),
-      postedBy: postedBy || {
-        id: "1",
-        name: "User",
-        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
-        rating: 4.8,
-      },
-      applicants: props.job.applicants_count || props.job.applicants || 0,
-      featured: props.job.featured || false,
-    };
-  }
+//     return {
+//       id: props.job.id.toString(),
+//       title: props.job.title,
+//       description: props.job.description,
+//       budget: {
+//         min: parseFloat(props.job.budget_min || 0),
+//         max: parseFloat(props.job.budget_max || 0),
+//         currency: "USD",
+//       },
+//       type: props.job.type,
+//       category: categoryName || "General",
+//       tags: tags,
+//       postedDate: new Date(props.job.created_at || props.job.createdAt || new Date()),
+//       postedBy: postedBy || {
+//         id: "1",
+//         name: "User",
+//         avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+//         rating: 4.8,
+//       },
+//       applicants: props.job.applicants_count || props.job.applicants || 0,
+//       featured: props.job.featured || false,
+//     };
+//   }
 
-  // Fallback
-  return {
-    id: "1",
-    title: "Loading...",
-    description: "",
-    budget: { min: 0, max: 0, currency: "USD" },
-    type: "fixed",
-    category: "General",
-    tags: [],
-    postedDate: new Date(),
-    postedBy: {
-      id: "1",
-      name: "User",
-      avatar: "",
-      rating: 5,
-    },
-    applicants: 0,
-  } as Job;
-});
+//   // Fallback
+//   return {
+//     id: "1",
+//     title: "Loading...",
+//     description: "",
+//     budget: { min: 0, max: 0, currency: "USD" },
+//     type: "fixed",
+//     category: "General",
+//     tags: [],
+//     postedDate: new Date(),
+//     postedBy: {
+//       id: "1",
+//       name: "User",
+//       avatar: "",
+//       rating: 5,
+//     },
+//     applicants: 0,
+//   } as Job;
+// });
 
-const budgetDisplay = computed(() => {
-  if (job.value.type === "fixed") {
-    return `$${job.value.budget.min.toLocaleString()}-$${job.value.budget.max.toLocaleString()}`;
-  } else {
-    return `$${job.value.budget.min}-$${job.value.budget.max}/hr`;
-  }
-});
+// const budgetDisplay = computed(() => {
+//   if (job.value.type === "fixed") {
+//     return `$${job.value.budget.min.toLocaleString()}-$${job.value.budget.max.toLocaleString()}`;
+//   } else {
+//     return `$${job.value.budget.min}-$${job.value.budget.max}/hr`;
+//   }
+// });
 
-const postedTimeAgo = computed(() => {
-  const now = new Date();
-  const posted = job.value.postedDate;
-  const diffMs = now.getTime() - posted.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+// const postedTimeAgo = computed(() => {
+//   const now = new Date();
+//   const posted = job.value.postedDate;
+//   const diffMs = now.getTime() - posted.getTime();
+//   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+//   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-  if (diffDays > 0) {
-    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  } else if (diffHours > 0) {
-    return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-  } else {
-    return "Just now";
-  }
-});
+//   if (diffDays > 0) {
+//     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+//   } else if (diffHours > 0) {
+//     return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+//   } else {
+//     return "Just now";
+//   }
+// });
 </script>

@@ -198,12 +198,9 @@
                 <span
                   >Posted
                   {{
-                    Math.floor(
-                      (new Date().getTime() - job.createdDate.getTime()) /
-                        (1000 * 60 * 60 * 24),
-                    )
+                    job.created_at
                   }}
-                  days ago</span
+                 </span
                 >
               </div>
             </div>
@@ -414,7 +411,7 @@ const transformJob = (job: any) => {
       type: job.type || "fixed",
       category: categoryName,
       tags: tags,
-      postedDate: new Date(job.created_at || job.createdAt || new Date()),
+      created_at: job.created_at || job.createdAt || new Date(),
       postedBy: postedBy || {
         id: "1",
         name: "User",
@@ -489,11 +486,12 @@ const stats = computed(() => {
 const selectedJobStatus = ref<"all" | "active" | "closed">("all");
 
 const filteredMyJobs = computed(() => {
-  if (selectedJobStatus.value === "all") return myJobs;
-  return myJobs.filter((job) => job.status === selectedJobStatus.value);
+  if (selectedJobStatus.value === "all") return myJobs.value;
+  return myJobs.value.filter((job) => (job.status || "active") === selectedJobStatus.value);
 });
 
-const statusBadgeColor = (status: string) => {
+const statusBadgeColor = (status: string | undefined | null) => {
+  if (!status) return "default";
   switch (status) {
     case "active":
       return "success";
@@ -508,7 +506,8 @@ const statusBadgeColor = (status: string) => {
   }
 };
 
-const getStatusLabel = (status: string) => {
+const getStatusLabel = (status: string | undefined | null) => {
+  if (!status) return "Unknown";
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 </script>

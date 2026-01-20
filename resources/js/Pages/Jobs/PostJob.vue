@@ -48,7 +48,7 @@
               >
                 <option value="">Select a category</option>
                 <option
-                  v-for="cat in jobCategories"
+                  v-for="cat in categories"
                   :key="cat.id"
                   :value="cat.name"
                 >
@@ -198,7 +198,6 @@
 
 <script setup lang="ts">
 import { useForm, Head, router } from "@inertiajs/vue3";
-import { jobCategories } from "@/data/jobs";
 import Navbar from "@/Components/Navbar.vue";
 import Footer from "@/Components/Footer.vue";
 import { Button } from "@/Components/ui/button";
@@ -213,6 +212,14 @@ import {
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 
+interface Props {
+  categories?: Array<{ id: number | string; name: string }>;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  categories: () => [],
+});
+
 const form = useForm({
   title: "",
   category: "",
@@ -225,7 +232,17 @@ const form = useForm({
 });
 
 const submit = () => {
-  form.post("/api/jobs", {
+  // Convert all form data to strings before submission
+  form.transform((data) => ({
+    title: String(data.title || ""),
+    category: String(data.category || ""),
+    description: String(data.description || ""),
+    type: String(data.type || "fixed"),
+    budgetMin: String(data.budgetMin || "0"),
+    budgetMax: String(data.budgetMax || "0"),
+    tags: String(data.tags || ""),
+    featured: String(data.featured ? "1" : "0"),
+  })).post("/jobs", {
     // Controller will handle redirect to dashboard
     // Don't manually redirect to avoid duplicate requests
     onError: (errors) => {

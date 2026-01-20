@@ -8,7 +8,11 @@ export interface Job {
     currency: string
   }
   type: 'fixed' | 'hourly'
-  category: string
+  category: {
+    id: string
+    name: string
+    slug: string
+  }
   tags: string[]
   postedDate: Date
   postedBy: {
@@ -19,6 +23,7 @@ export interface Job {
   }
   applicants: number
   featured?: boolean
+  created_at?:string
 }
 
 export const jobsData: Job[] = [
@@ -29,7 +34,11 @@ export const jobsData: Job[] = [
       'We need a skilled React developer to build an interactive dashboard with D3.js visualizations. The dashboard should display real-time analytics data with smooth animations and responsive design. Must have experience with React hooks, TypeScript, and D3.js',
     budget: { min: 2500, max: 5000, currency: 'USD' },
     type: 'fixed',
-    category: 'Frontend Development',
+    category: {
+      id: '1',
+      name: 'Frontend Development',
+      slug: 'frontend-development',
+    },
     tags: ['React', 'D3.js', 'TypeScript', 'Dashboard'],
     postedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
     postedBy: {
@@ -48,7 +57,11 @@ export const jobsData: Job[] = [
       'Complete frontend development for an e-commerce platform using Vue 3 and Tailwind CSS. Project includes product listings, shopping cart, checkout flow, and user authentication UI. Responsive design required for all screen sizes.',
     budget: { min: 3000, max: 6500, currency: 'USD' },
     type: 'fixed',
-    category: 'Frontend Development',
+    category: {
+      id: '1',
+      name: 'Frontend Development',
+      slug: 'frontend-development',
+    },
     tags: ['Vue 3', 'Tailwind CSS', 'E-Commerce', 'JavaScript'],
     postedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
     postedBy: {
@@ -67,7 +80,11 @@ export const jobsData: Job[] = [
       'Design a beautiful and intuitive mobile app for a fitness tracking platform. Includes user onboarding screens, workout history, progress tracking, and social features. Must create both iOS and Android designs with design systems.',
     budget: { min: 1500, max: 3500, currency: 'USD' },
     type: 'fixed',
-    category: 'UI/UX Design',
+    category: {
+      id: '2',
+      name: 'UI/UX Design',
+      slug: 'ui-ux-design',
+    },
     tags: ['Figma', 'Mobile Design', 'User Experience', 'Design System'],
     postedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
     postedBy: {
@@ -86,7 +103,11 @@ export const jobsData: Job[] = [
       'Build a scalable REST API using Node.js, Express, and MongoDB. API should handle user authentication, database operations, and real-time notifications. Must include comprehensive API documentation and unit tests.',
     budget: { min: 45, max: 85, currency: 'USD/hour' },
     type: 'hourly',
-    category: 'Backend Development',
+    category: {
+      id: '3',
+      name: 'Backend Development',
+      slug: 'backend-development',
+    },
     tags: ['Node.js', 'Express', 'MongoDB', 'REST API'],
     postedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
     postedBy: {
@@ -105,7 +126,11 @@ export const jobsData: Job[] = [
       'Customize an existing WordPress theme for a real estate agency. Includes homepage redesign, property listing templates, contact forms, and SEO optimization. Must be responsive and fast-loading.',
     budget: { min: 800, max: 1800, currency: 'USD' },
     type: 'fixed',
-    category: 'Web Development',
+    category: {
+      id: '4',
+      name: 'Web Development',
+      slug: 'web-development',
+    },
     tags: ['WordPress', 'PHP', 'CSS', 'Responsive Design'],
     postedDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
     postedBy: {
@@ -124,7 +149,11 @@ export const jobsData: Job[] = [
       'Analyze large datasets and create interactive visualizations using Python, Pandas, and Matplotlib. Generate insights and create an interactive dashboard for business intelligence. Deliverable: Jupyter notebooks and Python scripts.',
     budget: { min: 2000, max: 4000, currency: 'USD' },
     type: 'fixed',
-    category: 'Data Science',
+    category: {
+      id: '5',
+      name: 'Data Science',
+      slug: 'data-science',
+    },
     tags: ['Python', 'Data Analysis', 'Pandas', 'Visualization'],
     postedDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
     postedBy: {
@@ -143,7 +172,11 @@ export const jobsData: Job[] = [
       'Develop an iOS application for task management with offline support. Must use SwiftUI, Core Data, and implement cloud synchronization. App should be published on the App Store with proper testing and documentation.',
     budget: { min: 4000, max: 8000, currency: 'USD' },
     type: 'fixed',
-    category: 'Mobile Development',
+    category: {
+      id: '6',
+      name: 'Mobile Development',
+      slug: 'mobile-development',
+    },
     tags: ['Swift', 'iOS', 'SwiftUI', 'App Store'],
     postedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     postedBy: {
@@ -162,7 +195,11 @@ export const jobsData: Job[] = [
       'Write comprehensive technical documentation for a developer toolkit. Includes API documentation, user guides, and code examples. Must be clear, accurate, and formatted in Markdown. SEO-optimized for discoverability.',
     budget: { min: 40, max: 70, currency: 'USD/hour' },
     type: 'hourly',
-    category: 'Writing & Translation',
+    category: {
+      id: '7',
+      name: 'Writing & Translation',
+      slug: 'writing-translation',
+    },
     tags: ['Technical Writing', 'Documentation', 'Markdown', 'API'],
     postedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
     postedBy: {

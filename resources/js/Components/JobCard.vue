@@ -15,7 +15,7 @@
       >
         {{ job.title }}
       </h3>
-      <p class="text-sm text-slate-600 mt-1">{{ job.category }}</p>
+      <p class="text-sm text-slate-600 mt-1">{{ job.category?.name }}</p>
     </div>
 
     <!-- Description -->
@@ -75,18 +75,20 @@ const budgetDisplay = computed(() => {
 });
 
 const postedTimeAgo = computed(() => {
-  const now = new Date();
-  const posted = props.job.postedDate;
-  const diffMs = now.getTime() - posted.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    // const now = new Date();
+    // const posted = props.job.postedDate;
+    // const diffMs = now.getTime() - posted.getTime();
+    // const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    // const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-  if (diffDays > 0) {
-    return `${diffDays}d ago`;
-  } else if (diffHours > 0) {
-    return `${diffHours}h ago`;
-  } else {
-    return "Just now";
-  }
+    // if (diffDays > 0) {
+    //   return `${diffDays}d ago`;
+    // } else if (diffHours > 0) {
+    //   return `${diffHours}h ago`;
+    // } else {
+    //   return "Just now";
+    // }
+    console.log(props.job)
+    return props.job.created_at;
 });
 </script>

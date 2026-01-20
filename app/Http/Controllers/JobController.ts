@@ -4,17 +4,29 @@ import { JobRequest } from "@/Request/JobRequest";
 import { Job } from "@/Model/Job";
 import { JobRepository } from "app/Repository/JobRepository";
 import { JobInterface } from "@/Model/Interface";
+import { Category } from "@/Model/Category";
 
 @Inject()
 export class JobController {
   constructor(private jobRepository: JobRepository) {}
 
+  async create({ res } = httpContext) {
+    const categories = await Category.all();
+    return res.inertia("Jobs/PostJob", {
+      categories: categories || [],
+    });
+  }
+
+
   async index({ req, res } = httpContext) {
     const result = await this.jobRepository.getJobs(req);
     //
+    const authUser = await this.jobRepository.getAuthUser(req,res);
+ 
     return res.inertia("Jobs/JobListings", {
       jobs: result.data || [],
       meta: result.meta || {},
+      auth:authUser?.toJSON() || {},
     });
   }
 
@@ -24,8 +36,11 @@ export class JobController {
       return res.redirect("/jobs");
     }
 
+    const authUser = await this.jobRepository.getAuthUser(req,res);
+
     return res.inertia("Jobs/JobDetail", {
       job: await this.jobRepository.showJob(job),
+      auth:authUser?.toJSON() || {},
     });
   }
 

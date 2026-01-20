@@ -23,7 +23,8 @@ export class Job extends Model {
     budget_min: "number",
     budget_max: "number",
     featured: "boolean",
-    tags: "json",
+    tags: "array",
+    created_at: "now",
   };
 
   // Relationship to user

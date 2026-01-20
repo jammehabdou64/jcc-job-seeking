@@ -1,4 +1,5 @@
 import { Model } from "jcc-express-mvc/Eloquent";
+import { User as UserModel } from "./User";
 
 //
 export interface JobInterface  extends Model{
@@ -17,4 +18,16 @@ id: string;
   status: string;
   applicants_count: number;
   views_count: number;
+}
+
+
+
+export interface UserInterface  extends UserModel{
+  id?: string;
+  name: string;
+  email: string;
+  password: string;
+  role: "admin" | "employer" | "employee";
+  created_at?: string;
+  updated_at?: string;
 }

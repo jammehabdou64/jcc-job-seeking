@@ -25,7 +25,7 @@
 
           <div class="flex flex-col sm:flex-row gap-4">
             <Link href="/jobs" class="w-full sm:w-auto">
-              <Button variant="default" size="lg" full-width>
+              <Button variant="primary" size="lg" full-width>
                 Browse Jobs
               </Button>
             </Link>

@@ -22,7 +22,7 @@
           >
             Browse Jobs
           </Link>
-          <template v-if="auth?.user">
+          <template v-if="isAuthenticated">
             <Link
               href="/dashboard"
               class="text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200"
@@ -30,7 +30,7 @@
               Dashboard
             </Link>
             <Link
-              href="/post-job"
+              href="/jobs/create"
               class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 font-medium transition-colors duration-200"
             >
               Post a Job
@@ -46,7 +46,7 @@
                   {{ userInitials }}
                 </div>
                 <span class="text-slate-700 font-medium">{{
-                  auth.user.name
+                  auth.name
                 }}</span>
                 <svg
                   class="w-4 h-4 text-slate-600"
@@ -148,7 +148,7 @@
             >
               Browse Jobs
             </Link>
-            <template v-if="auth?.user">
+            <template v-if="isAuthenticated">
               <Link
                 href="/dashboard"
                 class="px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg font-medium transition-colors duration-200"
@@ -157,7 +157,7 @@
                 Dashboard
               </Link>
               <Link
-                href="/post-job"
+                href="/jobs/create"
                 class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 font-medium transition-colors duration-200"
                 @click="closeMobileMenu"
               >
@@ -165,7 +165,7 @@
               </Link>
               <div class="border-t border-slate-200 my-2"></div>
               <div class="px-4 py-2 text-slate-700 font-medium">
-                {{ auth.user.name }}
+                {{ auth?.name }}
               </div>
               <Link
                 href="/logout"
@@ -205,6 +205,13 @@ import { ref, computed } from "vue";
 const page = usePage();
 const auth: Record<string, any> = page.props.auth || {};
 
+console.log({auth:auth?.name})
+
+// Check if user is authenticated
+const isAuthenticated = computed(() => {
+  return !!(auth?.id);
+});
+
 const mobileMenuOpen = ref(false);
 
 const toggleMobileMenu = () => {
@@ -216,11 +223,11 @@ const closeMobileMenu = () => {
 };
 
 const userInitials = computed(() => {
-  if (!auth?.user?.name) return "U";
-  const names = auth.user.name.split(" ");
+  if (!auth?.name) return "U";
+  const names = auth.name.split(" ");
   if (names.length >= 2) {
     return (names[0][0] + names[1][0]).toUpperCase();
   }
-  return auth.user.name.substring(0, 2).toUpperCase();
+  return auth.name.substring(0, 2).toUpperCase();
 });
 </script>
