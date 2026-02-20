@@ -20,7 +20,14 @@ export class Kernel {
     }),
     flash(),
     fileUpload(),
-    inertia({ rootView: "index" }),
+    inertia({
+      rootView: "index",
+      sharedProps(req) {
+        return {
+          auth: req.user?.toJSON?.() || req.user || null,
+        };
+      },
+    }),
   ];
 
   public middlewareAliases = {

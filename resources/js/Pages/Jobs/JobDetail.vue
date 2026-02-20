@@ -36,7 +36,7 @@
                 size="md"
               />
             </div>
-            <p class="text-lg text-slate-600 mb-4">{{ job.category.name }}</p>
+            <p class="text-lg text-slate-600 mb-4">{{ job.category?.name || job.category }}</p>
             <div class="flex items-center gap-6 text-sm text-slate-600">
               <div class="flex items-center gap-2">
                 <span class="text-lg">💰</span>
@@ -48,7 +48,7 @@
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-lg">📬</span>
-                <span>{{ job.applicants }} applicants</span>
+                <span>{{ job.applicants_count ?? job.applicants ?? 0 }} applicants</span>
               </div>
             </div>
           </div>
@@ -66,25 +66,101 @@
 
         <!-- Action Buttons -->
         <div class="flex gap-4 pt-6 border-t border-slate-200">
-          <Button variant="default" size="lg" class="flex-1">
-            Apply Now
+          <Dialog v-if="auth?.id && !hasApplied">
+            <DialogTrigger as-child>
+              <Button variant="default" size="lg" class="flex-1" as="button">
+                Apply Now
+              </Button>
+            </DialogTrigger>
+            <DialogContent class="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Apply for this job</DialogTitle>
+                <DialogDescription>
+                  Add a cover message and optional bid amount to strengthen your application.
+                </DialogDescription>
+              </DialogHeader>
+              <form @submit.prevent="submitApply" class="space-y-4">
+                <div class="space-y-2">
+                  <Label for="message">Cover Message</Label>
+                  <textarea
+                    id="message"
+                    v-model="applyForm.message"
+                    rows="4"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    placeholder="Introduce yourself and explain why you're a good fit..."
+                  ></textarea>
+                </div>
+                <div class="space-y-2">
+                  <Label for="bidAmount">Bid Amount (optional)</Label>
+                  <input
+                    id="bidAmount"
+                    v-model.number="applyForm.bidAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Enter your bid"
+                  />
+                </div>
+                <DialogFooter>
+                  <DialogClose as-child>
+                    <Button type="button" variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button type="submit" :disabled="applyForm.processing">
+                    {{ applyForm.processing ? "Submitting..." : "Submit Application" }}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Button
+            v-else-if="auth?.id && hasApplied"
+            variant="secondary"
+            size="lg"
+            class="flex-1"
+            disabled
+          >
+            Already Applied
           </Button>
-          <Button variant="outline" size="lg">
-            <svg
-              class="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
-            Save Job
-          </Button>
+          <Link
+            v-else
+            href="/login"
+          >
+            <Button variant="default" size="lg" class="w-full">
+              Login to Apply
+            </Button>
+          </Link>
+          <Link
+            v-if="auth?.id"
+            :href="`/jobs/${job?.id}/save`"
+            :method="isSaved ? 'delete' : 'post'"
+            as="button"
+          >
+            <Button variant="outline" size="lg" :class="isSaved ? 'text-red-600 border-red-300' : ''">
+              <svg
+                class="w-5 h-5 mr-2"
+                :fill="isSaved ? 'currentColor' : 'none'"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+              {{ isSaved ? "Unsave Job" : "Save Job" }}
+            </Button>
+          </Link>
+          <Link v-else href="/login">
+            <Button variant="outline" size="lg">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              Save Job
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -145,7 +221,7 @@
               <div>
                 <p class="text-sm text-slate-600 mb-1">Category</p>
                 <p class="text-lg font-semibold text-slate-900">
-                  {{ job.category.name }}
+                  {{ job.category?.name || job.category }}
                 </p>
               </div>
               <div>
@@ -157,27 +233,27 @@
               <div>
                 <p class="text-sm text-slate-600 mb-1">Applications</p>
                 <p class="text-lg font-semibold text-slate-900">
-                  {{ job.applicants }} applicants
+                  {{ job.applicants_count ?? job.applicants ?? 0 }} applicants
                 </p>
               </div>
             </CardContent>
           </Card>
 
           <!-- Posted By -->
-          <Card class="bg-white">
+          <Card class="bg-white" v-if="job?.postedBy">
             <CardHeader>
               <CardTitle>Posted By</CardTitle>
             </CardHeader>
             <CardContent>
               <div class="flex items-center gap-4">
                 <img
-                  :src="job.postedBy.avatar"
-                  :alt="job.postedBy.name"
-                  class="w-16 h-16 rounded-full object-cover"
+                  :src="postedByAvatarUrl"
+                  :alt="job.postedBy?.name || 'User'"
+                  class="w-16 h-16 rounded-full object-cover bg-slate-200"
                 />
                 <div>
                   <p class="font-semibold text-slate-900">
-                    {{ job.postedBy.name }}
+                    {{ job.postedBy?.name || "User" }}
                   </p>
                   <div class="flex items-center gap-1 mt-1">
                     <!-- <span
@@ -206,17 +282,58 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { Link, Head } from "@inertiajs/vue3";
-import type { Job } from "@/data/jobs";
+import { Link, usePage, useForm } from "@inertiajs/vue3";
 import Navbar from "@/Components/Navbar.vue";
 import Footer from "@/Components/Footer.vue";
 import { Button } from "@/Components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
 import Badge from "@/Components/Badge.vue";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/Components/ui/dialog";
+import { Label } from "@/Components/ui/label";
 
-const {job} = defineProps<{
+const props = defineProps<{
   job?: any;
+  isSaved?: boolean;
+  hasApplied?: boolean;
 }>();
+
+const page = usePage();
+const auth = (page.props as any).auth || {};
+const job = props.job;
+const isSaved = props.isSaved || false;
+const hasApplied = props.hasApplied || false;
+
+const applyForm = useForm({
+  message: "",
+  bidAmount: null as number | null,
+});
+
+const postedByAvatarUrl = computed(() => {
+  const pb = job?.postedBy;
+  if (!pb) return `https://ui-avatars.com/api/?name=User&background=random`;
+  const av = pb.avatar;
+  if (!av) return `https://ui-avatars.com/api/?name=${encodeURIComponent(pb.name || "User")}&background=random`;
+  if (typeof av === "string" && (av.startsWith("http") || av.startsWith("/"))) return av;
+  return `/${av}`;
+});
+
+const submitApply = () => {
+  applyForm.post(`/jobs/${job?.id}/apply`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      applyForm.reset();
+    },
+  });
+};
 
 // Transform backend job to frontend format
 // const job = computed<Job>(() => {

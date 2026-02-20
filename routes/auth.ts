@@ -5,6 +5,7 @@ import { Route } from "jcc-express-mvc/Core";
 Route.prefix("/auth").group((Route) => {
   Route.post("/login", Auth.attempt);
   Route.post("/register", [AuthController, "register"]);
+  Route.post("/forgot-password", [AuthController, "forgotPassword"]);
 });
 
 Route.middleware("guest").get("/login", (req, res) =>
@@ -16,7 +17,9 @@ Route.middleware("guest").get("/register", (req, res) =>
 );
 
 Route.middleware("guest").get("/forgot-password", (req, res) =>
-  res.inertia("Auth/ForgotPassword"),
+  res.inertia("Auth/ForgotPassword", {
+    status: req.flash("status")?.[0] || undefined,
+  }),
 );
 
 Route.get("/logout", Auth.logout);

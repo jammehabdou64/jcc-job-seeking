@@ -76,13 +76,27 @@
                 <div class="flex items-center gap-6">
                   <div class="relative">
                     <div
-                      class="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-2xl"
+                      class="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden"
                     >
-                      {{ userInitials }}
+                      <img
+                        v-if="avatarUrl"
+                        :src="avatarUrl"
+                        alt="Profile"
+                        class="w-full h-full object-cover"
+                      />
+                      <span v-else>{{ userInitials }}</span>
                     </div>
+                    <input
+                      ref="avatarInputRef"
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif"
+                      class="hidden"
+                      @change="onAvatarSelected"
+                    />
                     <button
                       type="button"
-                      class="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md border border-slate-200 hover:bg-slate-50"
+                      class="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                      @click="triggerAvatarInput"
                     >
                       <svg
                         class="w-4 h-4 text-slate-600"
@@ -253,7 +267,9 @@
                       id="newPassword"
                       :type="showNewPassword ? 'text' : 'password'"
                       v-model="passwordForm.password"
-                      :class="{ 'border-red-500': passwordForm.errors?.password }"
+                      :class="{
+                        'border-red-500': passwordForm.errors?.password,
+                      }"
                     />
                     <button
                       type="button"
@@ -313,7 +329,8 @@
                       :type="showConfirmPassword ? 'text' : 'password'"
                       v-model="passwordForm.passwordConfirmation"
                       :class="{
-                        'border-red-500': passwordForm.errors?.passwordConfirmation,
+                        'border-red-500':
+                          passwordForm.errors?.passwordConfirmation,
                       }"
                     />
                     <button
@@ -387,56 +404,66 @@
                 Manage how you receive notifications
               </CardDescription>
             </CardHeader>
-            <CardContent class="space-y-4">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-medium text-slate-900">
-                    Email Notifications
-                  </p>
-                  <p class="text-sm text-slate-500">
-                    Receive email updates about your jobs and applications
-                  </p>
+            <form @submit.prevent="saveNotifications">
+              <CardContent class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-slate-900">
+                      Email Notifications
+                    </p>
+                    <p class="text-sm text-slate-500">
+                      Receive email updates about your jobs and applications
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="notifications.email"
+                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
+                  />
                 </div>
-                <input
-                  type="checkbox"
-                  v-model="notifications.email"
-                  class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
-                />
-              </div>
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-medium text-slate-900">
-                    Job Alerts
-                  </p>
-                  <p class="text-sm text-slate-500">
-                    Get notified when new jobs match your skills
-                  </p>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-slate-900">Job Alerts</p>
+                    <p class="text-sm text-slate-500">
+                      Get notified when new jobs match your skills
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="notifications.jobAlerts"
+                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
+                  />
                 </div>
-                <input
-                  type="checkbox"
-                  v-model="notifications.jobAlerts"
-                  class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
-                />
-              </div>
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-medium text-slate-900">
-                    Application Updates
-                  </p>
-                  <p class="text-sm text-slate-500">
-                    Updates on your job applications
-                  </p>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-slate-900">
+                      Application Updates
+                    </p>
+                    <p class="text-sm text-slate-500">
+                      Updates on your job applications
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    v-model="notifications.applicationUpdates"
+                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
+                  />
                 </div>
-                <input
-                  type="checkbox"
-                  v-model="notifications.applicationUpdates"
-                  class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button class="w-full sm:w-auto">Save Preferences</Button>
-            </CardFooter>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  type="submit"
+                  :disabled="notificationsForm.processing"
+                  class="w-full sm:w-auto"
+                >
+                  {{
+                    notificationsForm.processing
+                      ? "Saving..."
+                      : "Save Preferences"
+                  }}
+                </Button>
+              </CardFooter>
+            </form>
           </Card>
         </div>
       </div>
@@ -461,6 +488,7 @@ import {
 } from "@/Components/ui/card";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
+import { toast } from "vue-sonner";
 
 const page = usePage();
 const auth: Record<string, any> = page.props.auth || {};
@@ -471,10 +499,14 @@ const showCurrentPassword = ref(false);
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
 
+const avatarInputRef = ref<HTMLInputElement | null>(null);
+const avatarPreview = ref<string | null>(auth?.avatar || null);
+
 const profileForm = useForm({
-  name: auth?.user?.name || "",
-  email: auth?.user?.email || "",
-  bio: "",
+  name: auth?.name || "",
+  email: auth?.email || "",
+  bio: auth?.bio || "",
+  avatar: null as File | null,
 });
 
 const passwordForm = useForm({
@@ -484,28 +516,75 @@ const passwordForm = useForm({
 });
 
 const notifications = ref({
-  email: true,
-  jobAlerts: true,
-  applicationUpdates: true,
+  email: auth?.email_notifications ?? true,
+  jobAlerts: auth?.job_alerts ?? true,
+  applicationUpdates: auth?.application_updates ?? true,
 });
 
-const userInitials = computed(() => {
-  if (!auth?.user?.name) return "U";
-  const names = auth.user.name.split(" ");
-  if (names.length >= 2) {
-    return (names[0][0] + names[1][0]).toUpperCase();
-  }
-  return auth.user.name.substring(0, 2).toUpperCase();
+const notificationsForm = useForm({
+  email_notifications: auth?.email_notifications ?? true,
+  job_alerts: auth?.job_alerts ?? true,
+  application_updates: auth?.application_updates ?? true,
 });
 
-const updateProfile = () => {
-  profileForm.put("/profile", {
+const saveNotifications = () => {
+  notificationsForm.email_notifications = notifications.value.email;
+  notificationsForm.job_alerts = notifications.value.jobAlerts;
+  notificationsForm.application_updates =
+    notifications.value.applicationUpdates;
+  notificationsForm.put("/profile/notifications", {
     preserveScroll: true,
   });
 };
 
+const userInitials = computed(() => {
+  if (!auth?.name) return "U";
+  const names = auth.name.split(" ");
+  if (names.length >= 2) {
+    return (names[0][0] + names[1][0]).toUpperCase();
+  }
+  return auth.name.substring(0, 2).toUpperCase();
+});
+
+const avatarUrl = computed(() => {
+  const a = avatarPreview.value || auth?.avatar;
+  if (!a) return null;
+  if (typeof a === "string" && (a.startsWith("http") || a.startsWith("/")))
+    return a;
+  return `/${a}`;
+});
+
+const triggerAvatarInput = () => {
+  avatarInputRef.value?.click();
+};
+
+const onAvatarSelected = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (file && file.size <= 2 * 1024 * 1024) {
+    profileForm.avatar = file;
+    avatarPreview.value = URL.createObjectURL(file);
+  } else if (file && file.size > 2 * 1024 * 1024) {
+    alert("Image must be 2MB or smaller");
+  }
+  input.value = "";
+};
+
+const updateProfile = () => {
+  profileForm.put(`/profile/${auth?.id}`, {
+    preserveScroll: true,
+    forceFormData: true,
+    onSuccess: () => {
+      toast.success("Profile updated successfully");
+    },
+    onError: () => {
+      toast.error("Failed to update profile");
+    },
+  });
+};
+
 const updatePassword = () => {
-  passwordForm.put("/profile/password", {
+  passwordForm.put(`/profile/password/${auth?.id}`, {
     preserveScroll: true,
     onSuccess: () => {
       passwordForm.reset();
@@ -513,4 +592,3 @@ const updatePassword = () => {
   });
 };
 </script>
-

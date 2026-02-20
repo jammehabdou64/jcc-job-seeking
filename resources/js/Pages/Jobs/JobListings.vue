@@ -296,7 +296,10 @@ const itemsPerPage = props.meta?.limit || 12;
 
 // Transform backend jobs to frontend format
 const transformJob = (job: any) => {
-  const tags = typeof job.tags === 'string' ? JSON.parse(job.tags || '[]') : (job.tags || []);
+  const tags =
+    typeof job.tags === "string"
+      ? JSON.parse(job.tags || "[]")
+      : job.tags || [];
   return {
     id: job.id.toString(),
     title: job.title,
@@ -332,7 +335,7 @@ const filteredJobs = computed(() => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       job.description.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      job.tags.some((tag) =>
+      job.tags.some((tag: any) =>
         tag.toLowerCase().includes(searchQuery.value.toLowerCase()),
       );
 
@@ -401,11 +404,11 @@ const reloadJobs = () => {
   const params: any = {
     page: currentPage.value,
   };
-  
+
   if (searchQuery.value) params.search = searchQuery.value;
   if (selectedCategory.value) params.category = selectedCategory.value;
   if (selectedJobType.value) params.type = selectedJobType.value;
-  
+
   router.get("/jobs", params, {
     preserveState: true,
     preserveScroll: true,

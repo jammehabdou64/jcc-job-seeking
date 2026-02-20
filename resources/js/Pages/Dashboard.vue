@@ -174,7 +174,9 @@
                       : `$${job.budget.min}/hr`
                   }}
                 </div>
-                <Button variant="outline" size="sm">Edit</Button>
+                <Link :href="`/jobs/${job.id}/edit`">
+                  <Button variant="outline" size="sm">Edit</Button>
+                </Link>
               </div>
             </div>
 
@@ -332,7 +334,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { jobsData } from "../data/jobs";
+import { Link } from "@inertiajs/vue3";
 import JobCard from "@/Components/JobCard.vue";
 import Button from "@/Components/Button.vue";
 import Badge from "@/Components/Badge.vue";
@@ -342,6 +344,7 @@ import Footer from "@/Components/Footer.vue";
 const props = defineProps<{
   myJobs?: any[];
   applications?: any[];
+  savedJobs?: any[];
 }>();
 
 // Tab state
@@ -442,9 +445,9 @@ const applications = computed(() => {
 });
 
 const savedJobs = computed(() => {
-  // For now, use mock data for saved jobs
-  // In the future, this would come from a saved_jobs table
-  return [jobsData[2], jobsData[4], jobsData[6]];
+  return (props.savedJobs || [])
+    .map(transformJob)
+    .filter((job): job is NonNullable<typeof job> => job !== null);
 });
 
 // Stats

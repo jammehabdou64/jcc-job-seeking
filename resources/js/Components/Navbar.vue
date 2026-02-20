@@ -41,12 +41,18 @@
                 class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <div
-                  class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold text-sm"
+                  class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold text-sm"
                 >
-                  {{ userInitials }}
+                  <img
+                    v-if="userAvatarUrl"
+                    :src="userAvatarUrl"
+                    :alt="auth?.name"
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else>{{ userInitials }}</span>
                 </div>
                 <span class="text-slate-700 font-medium">{{
-                  auth.name
+                  auth?.name || 'User'
                 }}</span>
                 <svg
                   class="w-4 h-4 text-slate-600"
@@ -163,9 +169,16 @@
               >
                 Post a Job
               </Link>
+              <Link
+                href="/profile"
+                class="px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg font-medium transition-colors duration-200"
+                @click="closeMobileMenu"
+              >
+                Profile
+              </Link>
               <div class="border-t border-slate-200 my-2"></div>
               <div class="px-4 py-2 text-slate-700 font-medium">
-                {{ auth?.name }}
+                {{ auth?.name || 'User' }}
               </div>
               <Link
                 href="/logout"
@@ -205,11 +218,10 @@ import { ref, computed } from "vue";
 const page = usePage();
 const auth: Record<string, any> = page.props.auth || {};
 
-console.log({auth:auth?.name})
 
-// Check if user is authenticated
+// Check if user is authenticated (auth is the user object when logged in)
 const isAuthenticated = computed(() => {
-  return !!(auth?.id);
+  return !!auth?.id;
 });
 
 const mobileMenuOpen = ref(false);
@@ -229,5 +241,13 @@ const userInitials = computed(() => {
     return (names[0][0] + names[1][0]).toUpperCase();
   }
   return auth.name.substring(0, 2).toUpperCase();
+});
+
+const userAvatarUrl = computed(() => {
+  const a = auth?.avatar;
+  if (!a) return null;
+  if (typeof a === "string" && (a.startsWith("http") || a.startsWith("/")))
+    return a;
+  return `/${a}`;
 });
 </script>
