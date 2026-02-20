@@ -10,6 +10,6 @@ export class SavedJob extends Model {
   }
 
   job() {
-    return this.belongsTo(Job, "job_id");
+    return this.belongsTo(Job);
   }
 }

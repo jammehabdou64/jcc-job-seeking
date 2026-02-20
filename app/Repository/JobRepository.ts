@@ -75,7 +75,7 @@ export class JobRepository {
 
   public async getSavedJobs(userId: string) {
     const saved = await SavedJob.where("user_id", userId)
-      .with(["job", "job.category", "job.postedBy"])
+      .with(["job.category"])
       .get();
     return (saved || []).map((s: any) => s.job).filter(Boolean);
   }
@@ -106,7 +106,14 @@ export class JobRepository {
             rating: 4.8,
             jobsCompleted: 0,
           }
-        : { id: null, name: "User", bio: null, avatar: "", rating: 4.8, jobsCompleted: 0 },
+        : {
+            id: null,
+            name: "User",
+            bio: null,
+            avatar: "",
+            rating: 4.8,
+            jobsCompleted: 0,
+          },
     }));
   }
 
