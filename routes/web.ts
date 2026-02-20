@@ -14,13 +14,13 @@ Route.prefix("/jobs")
     Route.get("/", "index");
     Route.middleware(["auth"]).get("/create", "create");
     Route.middleware(["auth"]).post("/", "store");
-    Route.get("/{job}", "show");
-    Route.middleware(["auth"]).get("/{job}/edit", "edit");
-    Route.middleware(["auth"]).put("/{job}", "update");
-    Route.middleware(["auth"]).delete("/{job}", "destroy");
-    Route.middleware(["auth"]).post("/{job}/save", "saveJob");
-    Route.middleware(["auth"]).delete("/{job}/save", "unsaveJob");
-    Route.middleware(["auth"]).post("/{job}/apply", "apply");
+    Route.get("/{slug$job}", "show");
+    Route.middleware(["auth"]).get("/{slug$job}/edit", "edit");
+    Route.middleware(["auth"]).put("/{slug$job}", "update");
+    Route.middleware(["auth"]).delete("/{slug$job}", "destroy");
+    Route.middleware(["auth"]).post("/{slug$job}/save", "saveJob");
+    Route.middleware(["auth"]).delete("/{slug$job}/save", "unsaveJob");
+    Route.middleware(["auth"]).post("/{slug$job}/apply", "apply");
   });
 
 Route.middleware(["auth"])
@@ -28,6 +28,7 @@ Route.middleware(["auth"])
   .controller(ProfileController)
   .group(() => {
     Route.get("/", "show");
+    Route.get("/view/{user}", "viewUser");
     Route.put("/{user}", "update");
     Route.post("/{user}", "update"); // POST for file uploads (avatar)
     Route.put("/password/{user}", "updatePassword");

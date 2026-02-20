@@ -12,6 +12,23 @@ export class ProfileController {
   }
 
   @Method()
+  async viewUser(user: User) {
+    if (!user) {
+      return redirect("/dashboard");
+    }
+    const profileData = (user as any).toJSON?.() || {
+      id: (user as any).id,
+      name: (user as any).name,
+      avatar: (user as any).avatar,
+      bio: (user as any).bio,
+    };
+    return inertia("Profile/ViewUser", {
+      profileUser: profileData,
+      auth: auth()?.toJSON?.() || null,
+    });
+  }
+
+  @Method()
   async update(user: User) {
     if (!user) {
       return response().status(404).json({ message: "User not found" });
@@ -38,7 +55,8 @@ export class ProfileController {
     }
 
     if (request().hasFile("avatar")) {
-      updateData.avatar = request().file("avatar").store("avatars");
+      updateData.avatar =
+        "/avatars/" + request().file("avatar").store("avatars");
     }
 
     await user.update(updateData);

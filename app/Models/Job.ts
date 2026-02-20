@@ -8,6 +8,7 @@ export class Job extends Model {
     "user_id",
     "category_id",
     "title",
+    "slug",
     "description",
     "category",
     "type",
@@ -40,5 +41,15 @@ export class Job extends Model {
 
   applications() {
     return this.hasMany(Application, "job_id");
+  }
+
+  static booted(): void {
+    this.creating((data) => {
+      data.slug = str().slug(data.title, true);
+    });
+
+    this.updating((data) => {
+      data.slug = str().slug(data.title, true);
+    });
   }
 }

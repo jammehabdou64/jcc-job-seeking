@@ -296,90 +296,21 @@ const selectedBudgetRange = ref<string>("");
 const itemsPerPage = 12;
 const currentPage = ref(props.meta?.page ?? props.meta?.current_page ?? 1);
 
-// Transform backend jobs to frontend format
-const transformJob = (job: any) => {
-  if (!job) return null;
-  const tags =
-    typeof job.tags === "string"
-      ? (() => {
-          try {
-            return JSON.parse(job.tags || "[]");
-          } catch {
-            return [];
-          }
-        })()
-      : Array.isArray(job.tags)
-        ? job.tags
-        : [];
-  const categoryObj =
-    job.category && typeof job.category === "object"
-      ? {
-          id: job.category.id,
-          name: job.category.name,
-          slug: job.category.slug,
-        }
-      : {
-          id: "",
-          name: typeof job.category === "string" ? job.category : "",
-          slug: "",
-        };
-  const postedBy =
-    job.postedBy && typeof job.postedBy === "object"
-      ? {
-          id: job.postedBy.id?.toString() || job.user_id?.toString() || "1",
-          name: job.postedBy.name || "User",
-          avatar:
-            job.postedBy.avatar &&
-            (job.postedBy.avatar.startsWith("http") ||
-              job.postedBy.avatar.startsWith("/"))
-              ? job.postedBy.avatar
-              : job.postedBy.avatar
-                ? `/${job.postedBy.avatar}`
-                : `https://ui-avatars.com/api/?name=${encodeURIComponent(job.postedBy.name || "User")}&background=random`,
-          rating: 4.8,
-        }
-      : {
-          id: job.user_id?.toString() || "1",
-          name: "User",
-          avatar: `https://ui-avatars.com/api/?name=User&background=random`,
-          rating: 4.8,
-        };
-  return {
-    id: (job.id ?? job.user_id ?? "").toString(),
-    title: job.title || "",
-    description: job.description || "",
-    budget: {
-      min: parseFloat(job.budget_min || 0) || 0,
-      max: parseFloat(job.budget_max || 0) || 0,
-      currency: "USD",
-    },
-    type: job.type || "fixed",
-    category: categoryObj,
-    tags: tags,
-    postedDate: job.created_at ? new Date(job.created_at) : new Date(),
-    postedBy,
-    applicants: job.applicants_count ?? job.applicants ?? 0,
-    featured: !!job.featured,
-    created_at: job.created_at,
-  };
-};
-
-// Use jobs from props or fallback to empty array, filter nulls
+// Use jobs directly from backend (Laravel-style structure)
 const jobsData = computed(() => {
   const list = Array.isArray(props.jobs) ? props.jobs : [];
-  return list
-    .map(transformJob)
-    .filter((j): j is NonNullable<typeof j> => j != null);
+  return list.filter((j) => j != null && j.id != null);
 });
 
-// Computed filters
+// Client-side filters (when not using server-side filtering)
 const filteredJobs = computed(() => {
   return jobsData.value.filter((job) => {
+    const tags = Array.isArray(job.tags) ? job.tags : [];
     const matchesSearch =
-      job.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      job.tags.some((tag: any) =>
-        tag.toLowerCase().includes(searchQuery.value.toLowerCase()),
+      (job.title || "").toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      (job.description || "").toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      tags.some((tag: any) =>
+        String(tag).toLowerCase().includes(searchQuery.value.toLowerCase()),
       );
 
     const categoryName =
@@ -392,19 +323,17 @@ const filteredJobs = computed(() => {
     const matchesJobType =
       !selectedJobType.value || job.type === selectedJobType.value;
 
+    const maxBudget = parseFloat(String(job.budget_max || 0));
     let matchesBudget = true;
     if (selectedBudgetRange.value) {
-      if (selectedBudgetRange.value === "small" && job.budget.max >= 2500) {
+      if (selectedBudgetRange.value === "small" && maxBudget >= 2500) {
         matchesBudget = false;
       } else if (
         selectedBudgetRange.value === "medium" &&
-        (job.budget.max < 2500 || job.budget.max > 7500)
+        (maxBudget < 2500 || maxBudget > 7500)
       ) {
         matchesBudget = false;
-      } else if (
-        selectedBudgetRange.value === "large" &&
-        job.budget.max <= 7500
-      ) {
+      } else if (selectedBudgetRange.value === "large" && maxBudget <= 7500) {
         matchesBudget = false;
       }
     }

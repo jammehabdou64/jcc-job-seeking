@@ -3,7 +3,10 @@
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         <!-- Logo -->
-        <Link href="/" class="flex items-center gap-2 group">
+        <Link
+          :href="isAuthenticated ? '/jobs' : '/'"
+          class="flex items-center gap-2 group"
+        >
           <div
             class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center text-white font-bold"
           >
@@ -53,7 +56,7 @@
                   <span v-else>{{ userInitials }}</span>
                 </div>
                 <span class="text-slate-700 font-medium">{{
-                  auth?.name || 'User'
+                  auth?.name || "User"
                 }}</span>
                 <svg
                   class="w-4 h-4 text-slate-600"
@@ -180,7 +183,7 @@
               </Link>
               <div class="border-t border-slate-200 my-2"></div>
               <div class="px-4 py-2 text-slate-700 font-medium">
-                {{ auth?.name || 'User' }}
+                {{ auth?.name || "User" }}
               </div>
               <Link
                 href="/logout"
@@ -220,6 +223,7 @@ import { ref, computed } from "vue";
 const page = usePage();
 const auth: Record<string, any> = page.props.auth || {};
 
+console.log({ auth });
 
 // Check if user is authenticated (auth is the user object when logged in)
 const isAuthenticated = computed(() => {

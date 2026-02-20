@@ -97,14 +97,16 @@ export class JobRepository {
       job: app.job,
       freelancer: app.user
         ? {
+            id: app.user.id,
             name: app.user.name,
+            bio: app.user.bio,
             avatar:
               app.user.avatar ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(app.user.name || "User")}&background=random`,
             rating: 4.8,
             jobsCompleted: 0,
           }
-        : { name: "User", avatar: "", rating: 4.8, jobsCompleted: 0 },
+        : { id: null, name: "User", bio: null, avatar: "", rating: 4.8, jobsCompleted: 0 },
     }));
   }
 

@@ -32,12 +32,10 @@ export class JobController {
   async index() {
     const result = await this.jobRepository.getJobs();
     //
-    const authUser = await this.jobRepository.getAuthUser();
 
     return inertia("Jobs/JobListings", {
       jobs: result.data || [],
       meta: result.meta || {},
-      auth: authUser?.toJSON() || {},
     });
   }
 
@@ -181,15 +179,21 @@ export class JobController {
     if (!req.user?.id) {
       return res.status(401).json({ message: "Login required" });
     }
-    const jobId = (job as any).id;
+    const jobModel = job as any;
+    const jobId = jobModel.id;
+    const jobSlug = jobModel.slug || jobId;
+    const wantsJson =
+      req.xhr || req.get("Accept")?.includes("application/json");
     const existing = await SavedJob.where("user_id", req.user.id)
       .where("job_id", jobId)
       .first();
     if (existing) {
-      return res.redirect(`/jobs/${jobId}`);
+      if (wantsJson) return res.json({ saved: true });
+      return res.redirect(`/jobs/${jobSlug}`);
     }
     await SavedJob.create({ user_id: req.user.id, job_id: jobId });
-    return res.redirect(`/jobs/${jobId}`);
+    if (wantsJson) return res.json({ saved: true });
+    return res.redirect(`/jobs/${jobSlug}`);
   }
 
   @Method()
@@ -197,40 +201,49 @@ export class JobController {
     if (!req.user?.id) {
       return res.status(401).json({ message: "Login required" });
     }
-    const jobId = (job as any).id;
+    const jobModel = job as any;
+    const jobId = jobModel.id;
+    const jobSlug = jobModel.slug || jobId;
+    const wantsJson =
+      req.xhr || req.get("Accept")?.includes("application/json");
     await SavedJob.where("user_id", req.user.id)
       .where("job_id", jobId)
       .delete();
-    return res.redirect(`/jobs/${jobId}`);
+    if (wantsJson) return res.json({ saved: false });
+    return res.redirect(`/jobs/${jobSlug}`);
   }
 
   @Method()
-  async apply(job: Job, { req, res } = httpContext) {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: "Login required" });
-    }
-    const jobId = (job as any).id;
-    const existing = await Application.where("user_id", req.user.id)
+  async apply(job: Job) {
+    const req = request();
+    const res = response();
+
+    const jobModel = job as any;
+    const jobId = jobModel.id;
+    const jobSlug = jobModel.slug || jobId;
+
+    const existing = await Application.where("user_id", auth()?.id)
       .where("job_id", jobId)
       .first();
     if (existing) {
-      return res
+      return response()
         .with("info", "You have already applied")
-        .redirect(`/jobs/${jobId}`);
+        .redirect(`/jobs/${jobSlug}`);
     }
 
     let cvPath: string | null = null;
-    if (request().hasFile("cv")) {
+
+    if (req.hasFile("cv")) {
       const fileObj = req.files?.cv;
       const mimetype = (fileObj as any)?.mimetype || "";
       const allowed =
         mimetype === "application/pdf" || mimetype.startsWith("image/");
       if (!allowed) {
-        return res
+        return response()
           .with("error", "CV must be a PDF or image (JPG, PNG, GIF)")
-          .redirect(`/jobs/${jobId}`);
+          .redirect(`/jobs/${jobSlug}`);
       }
-      const filename = request().file("cv").store("cvs");
+      const filename = req.file("cv").store("cvs");
       cvPath = filename ? `cvs/${filename}` : null;
     }
 
@@ -245,12 +258,12 @@ export class JobController {
       status: "pending",
       cv: cvPath,
     });
-    const jobModel = job as any;
+
     await Job.where("id", jobId).update({
       applicants_count: (jobModel.applicants_count || 0) + 1,
     });
     return res
       .with("success", "Application submitted successfully")
-      .redirect(`/jobs/${jobId}`);
+      .redirect(303, `/jobs`);
   }
 }

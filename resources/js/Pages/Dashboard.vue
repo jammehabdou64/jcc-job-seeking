@@ -145,7 +145,7 @@
           >
             <div class="flex items-start justify-between gap-4 mb-4">
               <div class="flex-1">
-                <Link :href="`/jobs/${item.job?.id}`" class="block">
+                <Link :href="`/jobs/${item.job?.slug ?? item.job?.id}`" class="block">
                   <h3 class="text-lg font-semibold text-slate-900 hover:text-primary-600 mb-1">
                     {{ item.job?.title }}
                   </h3>
@@ -170,7 +170,7 @@
             <p v-if="item.message" class="text-sm text-slate-600 italic line-clamp-2 mb-4">
               "{{ item.message }}"
             </p>
-            <Link :href="`/jobs/${item.job?.id}`">
+            <Link :href="`/jobs/${item.job?.slug ?? item.job?.id}`">
               <Button variant="outline" size="sm">View Job</Button>
             </Link>
           </div>
@@ -255,12 +255,12 @@
               <div class="text-right flex-shrink-0">
                 <div class="text-lg font-bold text-slate-900 mb-2">
                   {{
-                    job.type === "fixed"
-                      ? `$${job.budget.min}-$${job.budget.max}`
-                      : `$${job.budget.min}/hr`
+                    job.type === "hourly"
+                      ? `$${job.budget_min}-$${job.budget_max}/hr`
+                      : `$${job.budget_min}-$${job.budget_max}`
                   }}
                 </div>
-                <Link :href="`/jobs/${job.id}/edit`">
+                <Link :href="`/jobs/${job.slug || job.id}/edit`">
                   <Button variant="outline" size="sm">Edit</Button>
                 </Link>
               </div>
@@ -272,13 +272,13 @@
               <div class="flex items-center gap-2">
                 <span class="text-lg">📬</span>
                 <span
-                  ><strong>{{ job.applicants }}</strong> applications</span
+                  ><strong>{{ job.applicants_count ?? job.applicants ?? 0 }}</strong> applications</span
                 >
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-lg">👁️</span>
                 <span
-                  ><strong>{{ job.viewCount || 0 }}</strong> views</span
+                  ><strong>{{ job.views_count ?? 0 }}</strong> views</span
                 >
               </div>
               <div class="flex items-center gap-2">
@@ -350,17 +350,33 @@
                     Applied on
                     {{ new Date(application.appliedDate).toLocaleDateString() }}
                   </p>
-                  <Link
-                    v-if="application.cv"
-                    :href="`/${application.cv}`"
-                    target="_blank"
-                    class="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-2"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    View CV / Resume
-                  </Link>
+                  <div class="flex flex-wrap gap-3 mt-2">
+                    <a
+                      v-if="application.cv"
+                      :href="getCvUrl(application.cv)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      View CV / Resume
+                    </a>
+                    <a
+                      v-if="application.cv"
+                      :href="getCvUrl(application.cv)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      class="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-800"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download
+                    </a>
+                  </div>
                 </div>
               </div>
 
@@ -373,13 +389,83 @@
                     :label="getStatusLabel(application.status)"
                     :variant="statusBadgeColor(application.status)"
                   />
-                  <Button
-                    v-if="application.status === 'pending'"
-                    variant="primary"
-                    size="sm"
-                  >
-                    View Profile
-                  </Button>
+                  <Dialog v-if="application.status === 'pending'">
+                    <DialogTrigger as-child>
+                      <Button variant="primary" size="sm">View Applicant</Button>
+                    </DialogTrigger>
+                    <DialogContent class="sm:max-w-lg p-0 overflow-hidden [&>button]:text-white hover:[&>button]:text-primary-100">
+                      <div class="bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-5">
+                        <DialogHeader>
+                          <DialogTitle class="text-white text-xl">Applicant Profile</DialogTitle>
+                          <DialogDescription class="text-primary-100 text-sm mt-1">
+                            {{ application.freelancer.name }} applied to {{ application.job?.title }}
+                          </DialogDescription>
+                        </DialogHeader>
+                      </div>
+                      <div class="p-6 space-y-6">
+                        <div class="flex items-center gap-4">
+                          <div class="relative">
+                            <img
+                              :src="getFreelancerAvatar(application.freelancer)"
+                              :alt="application.freelancer.name"
+                              class="w-20 h-20 rounded-full object-cover bg-slate-200 ring-4 ring-white shadow-lg"
+                            />
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <h3 class="text-xl font-semibold text-slate-900 truncate">{{ application.freelancer.name }}</h3>
+                            <p class="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
+                              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Applied {{ formatDate(application.appliedDate) }}
+                            </p>
+                            <div class="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-sm font-medium">
+                              ${{ application.bidAmount }} bid
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-if="application.freelancer?.bio" class="rounded-lg bg-slate-50 border border-slate-100 p-4">
+                          <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">About</h4>
+                          <p class="text-slate-700 whitespace-pre-line text-sm leading-relaxed">{{ application.freelancer.bio }}</p>
+                        </div>
+
+                        <div v-if="application.message" class="rounded-lg border border-slate-200 p-4">
+                          <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Cover Message</h4>
+                          <p class="text-slate-700 text-sm italic">"{{ application.message }}"</p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 pt-2">
+                          <Link
+                            v-if="application.freelancer?.id"
+                            :href="`/profile/view/${application.freelancer.id}`"
+                            as="button"
+                          >
+                            <Button variant="outline" size="sm" class="gap-2 w-full sm:w-auto">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              View Full Profile
+                            </Button>
+                          </Link>
+                          <a
+                            v-if="application.cv"
+                            :href="getCvUrl(application.cv)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-block"
+                          >
+                            <Button variant="primary" size="sm" class="gap-2 w-full sm:w-auto">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              View CV / Resume
+                            </Button>
+                          </a>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <Button v-else variant="secondary" size="sm" disabled>
                     Hired
                   </Button>
@@ -440,6 +526,14 @@ import Button from "@/Components/Button.vue";
 import Badge from "@/Components/Badge.vue";
 import Navbar from "@/Components/Navbar.vue";
 import Footer from "@/Components/Footer.vue";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/Components/ui/dialog";
 
 const props = defineProps<{
   myJobs?: any[];
@@ -456,127 +550,30 @@ const activeTab = ref<"jobs" | "applications" | "myApplications" | "saved">(
   (props.isEmployee ?? auth?.role === "employee") ? "myApplications" : "jobs"
 );
 
-// Transform backend jobs to frontend format
-const transformJob = (job: any) => {
-  if (!job || !job.id) {
-    return null;
-  }
-
-  try {
-    // Parse tags safely
-    let tags: string[] = [];
-    if (job.tags) {
-      if (typeof job.tags === "string") {
-        try {
-          tags = JSON.parse(job.tags || "[]");
-        } catch {
-          tags = [];
-        }
-      } else if (Array.isArray(job.tags)) {
-        tags = job.tags;
-      }
-    }
-
-    // Handle category - can be string or object
-    let categoryName = "General";
-    if (job.category) {
-      if (typeof job.category === "string") {
-        categoryName = job.category;
-      } else if (typeof job.category === "object" && job.category?.name) {
-        categoryName = job.category.name;
-      }
-    }
-
-    // Handle postedBy - can be object or need to construct
-    let postedBy = job.postedBy || job.posted_by;
-    if (!postedBy && job.user_id) {
-      postedBy = {
-        id: job.user_id?.toString() || "1",
-        name: "User",
-        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
-        rating: 4.8,
-      };
-    } else if (postedBy && typeof postedBy === "object") {
-      const name = postedBy.name || "User";
-      let avatar = postedBy.avatar;
-      if (avatar && !avatar.startsWith("http") && !avatar.startsWith("/")) {
-        avatar = `/${avatar}`;
-      }
-      postedBy = {
-        id: postedBy.id?.toString() || job.user_id?.toString() || "1",
-        name: name,
-        avatar:
-          avatar ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-        rating: postedBy.rating || 4.8,
-      };
-    }
-
-    const createdDate = new Date(job.created_at || job.createdAt || Date.now());
-    return {
-      id: job.id.toString(),
-      title: job.title || "Untitled Job",
-      description: job.description || "",
-      budget: {
-        min: parseFloat(job.budget_min || 0),
-        max: parseFloat(job.budget_max || 0),
-        currency: "USD",
-      },
-      type: job.type || "fixed",
-      category: {
-        id: job.category?.id || "",
-        name: categoryName,
-        slug: job.category?.slug || "",
-      },
-      tags: tags,
-      postedDate: createdDate,
-      created_at: job.created_at || job.createdAt || new Date(),
-      postedBy: postedBy || {
-        id: "1",
-        name: "User",
-        avatar: `https://ui-avatars.com/api/?name=User&background=random`,
-        rating: 4.8,
-      },
-      applicants: job.applicants_count || job.applicants || 0,
-      featured: job.featured || false,
-      status: job.status || "active",
-      createdDate: new Date(job.created_at || job.createdAt || new Date()),
-      viewCount: job.views_count || 0,
-    };
-  } catch (error) {
-    console.error("Error transforming job:", error, job);
-    return null;
-  }
-};
-
-// Transform backend jobs
+// Use backend data directly (Laravel-style structure)
 const myJobs = computed(() => {
-  return (props.myJobs || [])
-    .map(transformJob)
-    .filter((job): job is NonNullable<typeof job> => job !== null);
+  return (props.myJobs || []).filter((j) => j != null && j.id != null);
 });
 
-const applications = computed(() => {
-  return props.applications || [];
-});
+const applications = computed(() => props.applications || []);
 
 const savedJobs = computed(() => {
-  return (props.savedJobs || [])
-    .map(transformJob)
-    .filter((job): job is NonNullable<typeof job> => job !== null);
+  return (props.savedJobs || []).filter((j) => j != null && j.id != null);
 });
 
-// Transform myApplications for employees (app has job, status, etc.)
+// myApplications for employees - backend returns { job, status, message, bid_amount, ... }
 const myApplications = computed(() => {
   const list = props.myApplications || [];
-  return list.map((app: any) => ({
-    id: app.id,
-    status: app.status || "pending",
-    appliedDate: app.created_at || app.appliedDate,
-    message: app.message,
-    bidAmount: app.bid_amount,
-    job: transformJob(app.job),
-  })).filter((item: any) => item.job != null);
+  return list
+    .filter((app: any) => app?.job != null)
+    .map((app: any) => ({
+      id: app.id,
+      status: app.status || "pending",
+      appliedDate: app.created_at || app.appliedDate,
+      message: app.message,
+      bidAmount: app.bid_amount,
+      job: app.job,
+    }));
 });
 
 // Stats - role-specific
@@ -591,9 +588,9 @@ const stats = computed(() => {
       { label: "Saved Jobs", value: savedJobs.value.length, icon: "💾" },
     ];
   }
-  const activeJobCount = myJobs.value.filter((j) => j.status === "active").length;
+  const activeJobCount = myJobs.value.filter((j) => (j.status || "active") === "active").length;
   const totalApplications = applications.value.length;
-  const totalViews = myJobs.value.reduce((sum, job) => sum + (job.viewCount || 0), 0);
+  const totalViews = myJobs.value.reduce((sum, job) => sum + (job.views_count || 0), 0);
   const avgRating = 4.8;
   return [
     { label: "Active Jobs", value: activeJobCount, icon: "📋" },
@@ -645,5 +642,10 @@ const getFreelancerAvatar = (f: { avatar?: string; name?: string }) => {
   if (!av) return `https://ui-avatars.com/api/?name=${encodeURIComponent(f?.name || "User")}&background=random`;
   if (av.startsWith("http") || av.startsWith("/")) return av;
   return `/${av}`;
+};
+
+const getCvUrl = (cvPath: string) => {
+  if (!cvPath) return "#";
+  return cvPath.startsWith("/") ? cvPath : `/${cvPath}`;
 };
 </script>

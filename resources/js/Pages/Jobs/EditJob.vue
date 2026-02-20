@@ -267,7 +267,7 @@ const submit = () => {
     budgetMax: String(data.budgetMax || "0"),
     tags: String(data.tags || ""),
     featured: String(data.featured ? "1" : "0"),
-  })).put(`/jobs/${props.job?.id}`, {
+  })).put(`/jobs/${props.job?.slug ?? props.job?.id}`, {
     onError: (errors) => {
       console.error("Validation errors:", errors);
     },
@@ -276,7 +276,7 @@ const submit = () => {
 
 const confirmDelete = () => {
   if (confirm("Are you sure you want to delete this job? This action cannot be undone.")) {
-    router.delete(`/jobs/${props.job?.id}`, {
+    router.delete(`/jobs/${props.job?.slug ?? props.job?.id}`, {
       onSuccess: () => {
         router.visit("/dashboard");
       },
