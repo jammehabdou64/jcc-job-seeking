@@ -549,7 +549,8 @@ const userInitials = computed(() => {
 const avatarUrl = computed(() => {
   const a = avatarPreview.value || auth?.avatar;
   if (!a) return null;
-  if (typeof a === "string" && (a.startsWith("http") || a.startsWith("/")))
+  // blob URLs (e.g. from URL.createObjectURL) and absolute URLs must be used as-is
+  if (typeof a === "string" && (a.startsWith("blob:") || a.startsWith("http") || a.startsWith("/")))
     return a;
   return `/${a}`;
 });
@@ -571,7 +572,7 @@ const onAvatarSelected = (event: Event) => {
 };
 
 const updateProfile = () => {
-  profileForm.put(`/profile/${auth?.id}`, {
+  const options = {
     preserveScroll: true,
     forceFormData: true,
     onSuccess: () => {
@@ -580,7 +581,13 @@ const updateProfile = () => {
     onError: () => {
       toast.error("Failed to update profile");
     },
-  });
+  };
+  // Use POST when avatar is present (PUT + multipart can fail with express-fileupload)
+  if (profileForm.avatar) {
+    profileForm.post(`/profile/${auth?.id}`, options);
+  } else {
+    profileForm.put(`/profile/${auth?.id}`, options);
+  }
 };
 
 const updatePassword = () => {

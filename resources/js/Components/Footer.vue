@@ -39,10 +39,10 @@
               </Link>
             </li>
             <li>
-              <a
-                href="#"
+              <Link
+                href="/dashboard"
                 class="text-slate-400 hover:text-white transition-colors"
-                >My Applications</a
+                >My Applications</Link
               >
             </li>
             <li>
@@ -59,9 +59,9 @@
         <div>
           <h3 class="text-white font-semibold mb-4">For Employers</h3>
           <ul class="space-y-2">
-            <li>
+            <li v-if="canPostJob">
               <Link
-                href="/post-job"
+                href="/jobs/create"
                 class="text-slate-400 hover:text-white transition-colors"
               >
                 Post a Job
@@ -180,5 +180,10 @@
 </template>
 
 <script setup lang="ts">
-import { Link } from "@inertiajs/vue3";
+import { Link, usePage } from "@inertiajs/vue3";
+import { computed } from "vue";
+
+const page = usePage();
+const auth = computed(() => (page.props as any).auth || {});
+const canPostJob = computed(() => auth.value?.role !== "employee");
 </script>

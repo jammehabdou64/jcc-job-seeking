@@ -10,6 +10,7 @@ export class User extends Model {
     "password",
     "bio",
     "avatar",
+    "role",
     "email_notifications",
     "job_alerts",
     "application_updates",

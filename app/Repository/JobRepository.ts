@@ -6,7 +6,8 @@ import { type Builder } from "jcc-express-mvc/Eloquent/Builder";
 import { JobInterface } from "@/Model/Interface";
 import { User } from "@/Model/User";
 export class JobRepository {
-  async getJobs(req: Request) {
+  async getJobs() {
+    const req = request();
     const category = req.query.category as string;
     const type = req.query.type as string;
     const search = req.query.search as string;
@@ -61,8 +62,8 @@ export class JobRepository {
       .get();
   }
 
-  public async getAuthUser(req: Request, res: Response) {
-    const token = req.cookies.auth_token;
+  public async getAuthUser() {
+    const token = request().cookies.auth_token;
     if (!token) return null;
     try {
       const payload = jwtVerify(token as string);
@@ -92,6 +93,7 @@ export class JobRepository {
       bidAmount: app.bid_amount || 0,
       status: app.status,
       appliedDate: app.created_at,
+      cv: app.cv || null,
       job: app.job,
       freelancer: app.user
         ? {

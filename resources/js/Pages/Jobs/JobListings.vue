@@ -266,7 +266,7 @@
   <Footer />
 </template>
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { jobCategories } from "@/data/jobs";
 import JobCard from "@/Components/JobCard.vue";
@@ -282,7 +282,9 @@ const props = defineProps<{
     page: number;
     limit: number;
     total: number;
-    totalPages: number;
+    total_pages: number;
+    current_page: number;
+    per_page: number;
   };
 }>();
 
@@ -291,42 +293,83 @@ const searchQuery = ref("");
 const selectedCategory = ref<string>("");
 const selectedJobType = ref<string>("");
 const selectedBudgetRange = ref<string>("");
-const currentPage = ref(props.meta?.page || 1);
-const itemsPerPage = props.meta?.limit || 12;
+const itemsPerPage = 12;
+const currentPage = ref(props.meta?.page ?? props.meta?.current_page ?? 1);
 
 // Transform backend jobs to frontend format
 const transformJob = (job: any) => {
+  if (!job) return null;
   const tags =
     typeof job.tags === "string"
-      ? JSON.parse(job.tags || "[]")
-      : job.tags || [];
+      ? (() => {
+          try {
+            return JSON.parse(job.tags || "[]");
+          } catch {
+            return [];
+          }
+        })()
+      : Array.isArray(job.tags)
+        ? job.tags
+        : [];
+  const categoryObj =
+    job.category && typeof job.category === "object"
+      ? {
+          id: job.category.id,
+          name: job.category.name,
+          slug: job.category.slug,
+        }
+      : {
+          id: "",
+          name: typeof job.category === "string" ? job.category : "",
+          slug: "",
+        };
+  const postedBy =
+    job.postedBy && typeof job.postedBy === "object"
+      ? {
+          id: job.postedBy.id?.toString() || job.user_id?.toString() || "1",
+          name: job.postedBy.name || "User",
+          avatar:
+            job.postedBy.avatar &&
+            (job.postedBy.avatar.startsWith("http") ||
+              job.postedBy.avatar.startsWith("/"))
+              ? job.postedBy.avatar
+              : job.postedBy.avatar
+                ? `/${job.postedBy.avatar}`
+                : `https://ui-avatars.com/api/?name=${encodeURIComponent(job.postedBy.name || "User")}&background=random`,
+          rating: 4.8,
+        }
+      : {
+          id: job.user_id?.toString() || "1",
+          name: "User",
+          avatar: `https://ui-avatars.com/api/?name=User&background=random`,
+          rating: 4.8,
+        };
   return {
-    id: job.id.toString(),
-    title: job.title,
-    description: job.description,
+    id: (job.id ?? job.user_id ?? "").toString(),
+    title: job.title || "",
+    description: job.description || "",
     budget: {
-      min: parseFloat(job.budget_min || 0),
-      max: parseFloat(job.budget_max || 0),
+      min: parseFloat(job.budget_min || 0) || 0,
+      max: parseFloat(job.budget_max || 0) || 0,
       currency: "USD",
     },
-    type: job.type,
-    category: job.category,
+    type: job.type || "fixed",
+    category: categoryObj,
     tags: tags,
-    postedDate: new Date(job.created_at),
-    postedBy: {
-      id: job.user_id?.toString() || "1",
-      name: "User",
-      avatar: `https://ui-avatars.com/api/?name=User&background=random`,
-      rating: 4.8,
-    },
-    applicants: job.applicants_count || 0,
-    featured: job.featured || false,
+    postedDate: job.created_at ? new Date(job.created_at) : new Date(),
+    postedBy,
+    applicants: job.applicants_count ?? job.applicants ?? 0,
+    featured: !!job.featured,
+    created_at: job.created_at,
   };
 };
 
-// Use jobs from props or fallback to empty array
+// Use jobs from props or fallback to empty array, filter nulls
 const jobsData = computed(() => {
-  return (props.jobs || []).map(transformJob);
+  const list = Array.isArray(props.jobs) ? props.jobs : [];
+  return list
+    .map(transformJob)
+    .filter((j): j is NonNullable<typeof j> => j != null);
 });
 
 // Computed filters
@@ -339,8 +382,12 @@ const filteredJobs = computed(() => {
         tag.toLowerCase().includes(searchQuery.value.toLowerCase()),
       );
 
+    const categoryName =
+      job.category && typeof job.category === "object"
+        ? job.category.name
+        : job.category || "";
     const matchesCategory =
-      !selectedCategory.value || job.category === selectedCategory.value;
+      !selectedCategory.value || categoryName === selectedCategory.value;
 
     const matchesJobType =
       !selectedJobType.value || job.type === selectedJobType.value;
@@ -366,10 +413,21 @@ const filteredJobs = computed(() => {
   });
 });
 
+// Normalize meta (backend may use snake_case: current_page, per_page, total_pages)
+const metaNormalized = computed(() => {
+  // const m = props.meta || {};
+  return {
+    page: props.meta?.page ?? props.meta?.current_page ?? 1,
+    limit: props.meta?.limit ?? props.meta?.per_page ?? itemsPerPage,
+    total: props.meta?.total ?? 0,
+    totalPages: props.meta?.total_pages ?? props.meta?.total_pages ?? 1,
+  };
+});
+
 // Pagination - use backend pagination if available
 const totalPages = computed(() => {
-  if (props.meta?.totalPages) {
-    return props.meta.totalPages;
+  if (metaNormalized.value.totalPages > 0) {
+    return metaNormalized.value.totalPages;
   }
   return Math.ceil(filteredJobs.value.length / itemsPerPage);
 });
@@ -436,4 +494,23 @@ const goToPage = (page: number) => {
   currentPage.value = page;
   reloadJobs();
 };
+
+// Sync filter state from URL (e.g. on load or when navigating back)
+watch(
+  () => page.url,
+  (url) => {
+    try {
+      const params = new URLSearchParams(url.split("?")[1] || "");
+      const cat = params.get("category");
+      if (cat !== null) selectedCategory.value = cat;
+      const typ = params.get("type");
+      if (typ !== null) selectedJobType.value = typ;
+      const pg = params.get("page");
+      if (pg !== null) currentPage.value = parseInt(pg, 10) || 1;
+    } catch {
+      /* ignore */
+    }
+  },
+  { immediate: true },
+);
 </script>

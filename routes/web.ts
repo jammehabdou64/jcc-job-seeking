@@ -29,12 +29,13 @@ Route.middleware(["auth"])
   .group(() => {
     Route.get("/", "show");
     Route.put("/{user}", "update");
+    Route.post("/{user}", "update"); // POST for file uploads (avatar)
     Route.put("/password/{user}", "updatePassword");
     Route.put("/notifications", "updateNotifications");
   });
 
-Route.middleware(["auth"]).get("/home", (req, res, next) => {
-  return res.inertia("Home");
+Route.middleware(["auth"]).get("/home", (_req, res) => {
+  return res.redirect(302, "/dashboard");
 });
 
 require("./auth");

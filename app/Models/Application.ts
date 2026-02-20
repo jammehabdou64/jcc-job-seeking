@@ -9,6 +9,7 @@ export class Application extends Model {
     "message",
     "bid_amount",
     "status",
+    "cv",
   ];
 
   protected static casts: Record<string, string> = {

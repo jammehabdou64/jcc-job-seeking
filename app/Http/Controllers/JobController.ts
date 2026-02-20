@@ -12,19 +12,29 @@ import { Category } from "@/Model/Category";
 export class JobController {
   constructor(private jobRepository: JobRepository) {}
 
-  async create({ res } = httpContext) {
+  async create() {
+    const role = auth()?.role;
+    if (role === "employee") {
+      return response()
+        .status(403)
+        .with(
+          "error",
+          "Employees cannot post jobs. Create an employer account.",
+        )
+        .redirect(303, "/dashboard");
+    }
     const categories = await Category.all();
-    return res.inertia("Jobs/PostJob", {
+    return inertia("Jobs/PostJob", {
       categories: categories || [],
     });
   }
 
-  async index({ req, res } = httpContext) {
-    const result = await this.jobRepository.getJobs(req);
+  async index() {
+    const result = await this.jobRepository.getJobs();
     //
-    const authUser = await this.jobRepository.getAuthUser(req, res);
+    const authUser = await this.jobRepository.getAuthUser();
 
-    return res.inertia("Jobs/JobListings", {
+    return inertia("Jobs/JobListings", {
       jobs: result.data || [],
       meta: result.meta || {},
       auth: authUser?.toJSON() || {},
@@ -32,12 +42,12 @@ export class JobController {
   }
 
   @Method()
-  async show(job: Job, { req, res } = httpContext) {
+  async show(job: Job) {
     if (!job) {
-      return res.redirect("/jobs");
+      return redirect("/jobs");
     }
 
-    const authUser = (await this.jobRepository.getAuthUser(req, res)) as any;
+    const authUser = (await this.jobRepository.getAuthUser()) as any;
     const jobData = await this.jobRepository.showJob(job);
     const jobId = (job as any).id;
     const isSaved = authUser
@@ -47,7 +57,7 @@ export class JobController {
       ? await this.jobRepository.hasApplied(authUser.id, jobId)
       : false;
 
-    return res.inertia("Jobs/JobDetail", {
+    return inertia("Jobs/JobDetail", {
       job: jobData,
       auth: authUser?.toJSON() || {},
       isSaved: isSaved || false,
@@ -56,16 +66,23 @@ export class JobController {
   }
 
   @Method()
-  async store({ res } = httpContext, jobRequest: JobRequest) {
+  async store(jobRequest: JobRequest) {
+    const role = (auth() as any)?.role;
+    if (role === "employee") {
+      return response()
+        .status(403)
+        .with("error", "Employees cannot post jobs.")
+        .redirectBack();
+    }
     const job = await jobRequest.save();
 
     if (job) {
-      return res
+      return response()
         .with("success", "Job posted successfully")
         .redirect("/dashboard");
     }
 
-    return res.with("error", "Failed to post job").redirectBack();
+    return response().with("error", "Failed to post job").redirectBack();
   }
 
   @Method()
@@ -129,16 +146,33 @@ export class JobController {
 
   @Method()
   async myJobs({ req, res } = httpContext) {
-    const jobs = await this.jobRepository.myJobs(req.user?.id);
-    const savedJobs = await this.jobRepository.getSavedJobs(req.user?.id || "");
-    const applications = await this.jobRepository.getApplicationsForEmployer(
-      req.user?.id || "",
-    );
+    const userId = req.user?.id || "";
+    const role = (req.user as any)?.role;
+    const isEmployee = role === "employee";
+
+    const savedJobs = await this.jobRepository.getSavedJobs(userId);
+
+    if (isEmployee) {
+      const myApplications = await this.jobRepository.getMyApplications(userId);
+      return res.inertia("Dashboard", {
+        myJobs: [],
+        savedJobs: savedJobs || [],
+        applications: [],
+        myApplications: myApplications || [],
+        isEmployee: true,
+      });
+    }
+
+    const jobs = await this.jobRepository.myJobs(userId);
+    const applications =
+      await this.jobRepository.getApplicationsForEmployer(userId);
 
     return res.inertia("Dashboard", {
       myJobs: jobs || [],
       savedJobs: savedJobs || [],
       applications: applications || [],
+      myApplications: [],
+      isEmployee: false,
     });
   }
 
@@ -184,6 +218,22 @@ export class JobController {
         .with("info", "You have already applied")
         .redirect(`/jobs/${jobId}`);
     }
+
+    let cvPath: string | null = null;
+    if (request().hasFile("cv")) {
+      const fileObj = req.files?.cv;
+      const mimetype = (fileObj as any)?.mimetype || "";
+      const allowed =
+        mimetype === "application/pdf" || mimetype.startsWith("image/");
+      if (!allowed) {
+        return res
+          .with("error", "CV must be a PDF or image (JPG, PNG, GIF)")
+          .redirect(`/jobs/${jobId}`);
+      }
+      const filename = request().file("cv").store("cvs");
+      cvPath = filename ? `cvs/${filename}` : null;
+    }
+
     const message = req.body?.message || req.input("message") || "";
     const bidAmount =
       parseFloat(req.body?.bidAmount || req.input("bidAmount") || "0") || null;
@@ -193,6 +243,7 @@ export class JobController {
       message,
       bid_amount: bidAmount,
       status: "pending",
+      cv: cvPath,
     });
     const jobModel = job as any;
     await Job.where("id", jobId).update({

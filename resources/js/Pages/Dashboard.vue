@@ -1,13 +1,41 @@
 <template>
+  <Head>
+    <title>Dashboard - JobHub</title>
+    <meta name="description" content="Manage your jobs, applications, and saved jobs" />
+  </Head>
   <Navbar />
   <div class="bg-slate-50 min-h-[calc(100vh-64px)]">
     <!-- Header -->
     <div class="bg-white border-b border-slate-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 class="text-4xl font-bold text-slate-900 mb-2">Dashboard</h1>
+        <h1 class="text-4xl font-bold text-slate-900 mb-2">
+          Welcome back, {{ auth?.name || "User" }}!
+        </h1>
         <p class="text-lg text-slate-600">
-          Manage your jobs, applications, and saved jobs in one place
+          {{ isEmployee ? "Track your applications and saved jobs" : "Manage your jobs, applications, and saved jobs in one place" }}
         </p>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex flex-wrap gap-4">
+        <Link v-if="canPostJob" href="/jobs/create">
+          <Button variant="primary" class="gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Post a Job
+          </Button>
+        </Link>
+        <Link href="/jobs">
+          <Button :variant="isEmployee ? 'primary' : 'outline'" class="gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {{ isEmployee ? "Find Jobs" : "Browse Jobs" }}
+          </Button>
+        </Link>
       </div>
     </div>
 
@@ -41,6 +69,7 @@
       <div class="bg-white border-b border-slate-200 mb-8">
         <div class="flex gap-8">
           <button
+            v-if="!isEmployee"
             @click="activeTab = 'jobs'"
             :class="[
               'px-4 py-4 font-medium border-b-2 transition-all',
@@ -62,24 +91,24 @@
             </span>
           </button>
           <button
-            @click="activeTab = 'applications'"
+            @click="activeTab = isEmployee ? 'myApplications' : 'applications'"
             :class="[
               'px-4 py-4 font-medium border-b-2 transition-all',
-              activeTab === 'applications'
+              activeTab === (isEmployee ? 'myApplications' : 'applications')
                 ? 'text-primary-600 border-primary-600'
                 : 'text-slate-600 border-transparent hover:text-slate-900',
             ]"
           >
-            Applications
+            {{ isEmployee ? "My Applications" : "Applications" }}
             <span
               :class="[
                 'ml-2 px-2 py-0.5 rounded-full text-sm font-semibold',
-                activeTab === 'applications'
+                activeTab === (isEmployee ? 'myApplications' : 'applications')
                   ? 'bg-primary-100 text-primary-700'
                   : 'bg-slate-100 text-slate-700',
               ]"
             >
-              {{ applications.length }}
+              {{ isEmployee ? myApplications.length : applications.length }}
             </span>
           </button>
           <button
@@ -106,8 +135,65 @@
         </div>
       </div>
 
-      <!-- My Jobs Tab -->
-      <div v-show="activeTab === 'jobs'" class="space-y-6">
+      <!-- My Applications Tab (Employee) -->
+      <div v-show="isEmployee && activeTab === 'myApplications'" class="space-y-6">
+        <div class="space-y-4">
+          <div
+            v-for="item in myApplications"
+            :key="item.id"
+            class="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-md transition-all"
+          >
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <div class="flex-1">
+                <Link :href="`/jobs/${item.job?.id}`" class="block">
+                  <h3 class="text-lg font-semibold text-slate-900 hover:text-primary-600 mb-1">
+                    {{ item.job?.title }}
+                  </h3>
+                </Link>
+                <p class="text-slate-600 text-sm">
+                  {{ item.job?.category?.name || item.job?.category }}
+                </p>
+              </div>
+              <div class="flex flex-col items-end gap-1 shrink-0">
+                <Badge
+                  :label="getStatusLabel(item.status)"
+                  :variant="statusBadgeColor(item.status)"
+                />
+                <span class="text-xs text-slate-500">
+                  Applied {{ formatDate(item.appliedDate) }}
+                </span>
+                <span v-if="item.bidAmount" class="text-sm font-semibold text-slate-900">
+                  ${{ item.bidAmount }}
+                </span>
+              </div>
+            </div>
+            <p v-if="item.message" class="text-sm text-slate-600 italic line-clamp-2 mb-4">
+              "{{ item.message }}"
+            </p>
+            <Link :href="`/jobs/${item.job?.id}`">
+              <Button variant="outline" size="sm">View Job</Button>
+            </Link>
+          </div>
+        </div>
+        <div
+          v-if="myApplications.length === 0"
+          class="bg-white rounded-xl border border-slate-200 p-12 text-center"
+        >
+          <div class="text-4xl mb-4">📬</div>
+          <h3 class="text-xl font-semibold text-slate-900 mb-2">
+            No applications yet
+          </h3>
+          <p class="text-slate-600 mb-6">
+            Browse jobs and apply to get started
+          </p>
+          <Link href="/jobs">
+            <Button variant="primary">Browse Jobs</Button>
+          </Link>
+        </div>
+      </div>
+
+      <!-- My Jobs Tab (Employer) -->
+      <div v-show="!isEmployee && activeTab === 'jobs'" class="space-y-6">
         <!-- Filters -->
         <div class="flex gap-4 mb-6">
           <button
@@ -163,7 +249,7 @@
                     :variant="statusBadgeColor(job.status)"
                   />
                 </div>
-                <p class="text-slate-600 mb-3">{{ job.category }}</p>
+                <p class="text-slate-600 mb-3">{{ job.category?.name ?? job.category ?? "General" }}</p>
                 <p class="text-slate-600 line-clamp-2">{{ job.description }}</p>
               </div>
               <div class="text-right flex-shrink-0">
@@ -216,14 +302,14 @@
         >
           <div class="text-4xl mb-4">📋</div>
           <h3 class="text-xl font-semibold text-slate-900 mb-2">
-            No {{ selectedJobStatus }} jobs
+            {{ selectedJobStatus === "all" ? "No jobs yet" : `No ${selectedJobStatus} jobs` }}
           </h3>
           <p class="text-slate-600 mb-6">You haven't posted any jobs yet</p>
         </div>
       </div>
 
-      <!-- Applications Tab -->
-      <div v-show="activeTab === 'applications'" class="space-y-6">
+      <!-- Applications Tab (Employer - applications received) -->
+      <div v-show="!isEmployee && activeTab === 'applications'" class="space-y-6">
         <!-- Applications List -->
         <div class="space-y-4">
           <div
@@ -234,9 +320,9 @@
             <div class="flex items-start justify-between gap-4 mb-4">
               <div class="flex items-start gap-4 flex-1">
                 <img
-                  :src="application.freelancer.avatar"
+                  :src="getFreelancerAvatar(application.freelancer)"
                   :alt="application.freelancer.name"
-                  class="w-12 h-12 rounded-full object-cover"
+                  class="w-12 h-12 rounded-full object-cover bg-slate-200"
                 />
                 <div class="flex-1">
                   <h3 class="text-lg font-semibold text-slate-900 mb-1">
@@ -264,10 +350,21 @@
                     Applied on
                     {{ new Date(application.appliedDate).toLocaleDateString() }}
                   </p>
+                  <Link
+                    v-if="application.cv"
+                    :href="`/${application.cv}`"
+                    target="_blank"
+                    class="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-2"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    View CV / Resume
+                  </Link>
                 </div>
               </div>
 
-              <div class="text-right flex-shrink-0">
+              <div class="text-right shrink-0">
                 <div class="text-lg font-bold text-slate-900 mb-4">
                   ${{ application.bidAmount }}
                 </div>
@@ -334,7 +431,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Link } from "@inertiajs/vue3";
+import { Link, usePage, Head } from "@inertiajs/vue3";
+
+const page = usePage();
+const auth: Record<string, any> = page.props.auth || {};
 import JobCard from "@/Components/JobCard.vue";
 import Button from "@/Components/Button.vue";
 import Badge from "@/Components/Badge.vue";
@@ -345,10 +445,16 @@ const props = defineProps<{
   myJobs?: any[];
   applications?: any[];
   savedJobs?: any[];
+  myApplications?: any[];
+  isEmployee?: boolean;
 }>();
 
-// Tab state
-const activeTab = ref<"jobs" | "applications" | "saved">("jobs");
+const isEmployee = computed(() => props.isEmployee ?? auth?.role === "employee");
+
+// Tab state - default to myApplications for employees, jobs for employers
+const activeTab = ref<"jobs" | "applications" | "myApplications" | "saved">(
+  (props.isEmployee ?? auth?.role === "employee") ? "myApplications" : "jobs"
+);
 
 // Transform backend jobs to frontend format
 const transformJob = (job: any) => {
@@ -392,16 +498,21 @@ const transformJob = (job: any) => {
       };
     } else if (postedBy && typeof postedBy === "object") {
       const name = postedBy.name || "User";
+      let avatar = postedBy.avatar;
+      if (avatar && !avatar.startsWith("http") && !avatar.startsWith("/")) {
+        avatar = `/${avatar}`;
+      }
       postedBy = {
         id: postedBy.id?.toString() || job.user_id?.toString() || "1",
         name: name,
         avatar:
-          postedBy.avatar ||
+          avatar ||
           `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
         rating: postedBy.rating || 4.8,
       };
     }
 
+    const createdDate = new Date(job.created_at || job.createdAt || Date.now());
     return {
       id: job.id.toString(),
       title: job.title || "Untitled Job",
@@ -412,8 +523,13 @@ const transformJob = (job: any) => {
         currency: "USD",
       },
       type: job.type || "fixed",
-      category: categoryName,
+      category: {
+        id: job.category?.id || "",
+        name: categoryName,
+        slug: job.category?.slug || "",
+      },
       tags: tags,
+      postedDate: createdDate,
       created_at: job.created_at || job.createdAt || new Date(),
       postedBy: postedBy || {
         id: "1",
@@ -450,40 +566,48 @@ const savedJobs = computed(() => {
     .filter((job): job is NonNullable<typeof job> => job !== null);
 });
 
-// Stats
+// Transform myApplications for employees (app has job, status, etc.)
+const myApplications = computed(() => {
+  const list = props.myApplications || [];
+  return list.map((app: any) => ({
+    id: app.id,
+    status: app.status || "pending",
+    appliedDate: app.created_at || app.appliedDate,
+    message: app.message,
+    bidAmount: app.bid_amount,
+    job: transformJob(app.job),
+  })).filter((item: any) => item.job != null);
+});
+
+// Stats - role-specific
 const stats = computed(() => {
+  if (isEmployee.value) {
+    const pending = myApplications.value.filter((a: any) => a.status === "pending").length;
+    const accepted = myApplications.value.filter((a: any) => a.status === "accepted").length;
+    return [
+      { label: "Applications Sent", value: myApplications.value.length, icon: "📬" },
+      { label: "Pending", value: pending, icon: "⏳" },
+      { label: "Accepted", value: accepted, icon: "✅" },
+      { label: "Saved Jobs", value: savedJobs.value.length, icon: "💾" },
+    ];
+  }
   const activeJobCount = myJobs.value.filter((j) => j.status === "active").length;
   const totalApplications = applications.value.length;
   const totalViews = myJobs.value.reduce((sum, job) => sum + (job.viewCount || 0), 0);
   const avgRating = 4.8;
-
   return [
-    {
-      label: "Active Jobs",
-      value: activeJobCount,
-      icon: "📋",
-      color: "primary",
-    },
-    {
-      label: "Total Applications",
-      value: totalApplications,
-      icon: "📬",
-      color: "accent",
-    },
-    {
-      label: "Total Views",
-      value: totalViews,
-      icon: "👁️",
-      color: "success",
-    },
-    {
-      label: "Avg Rating",
-      value: avgRating,
-      icon: "⭐",
-      color: "primary",
-    },
+    { label: "Active Jobs", value: activeJobCount, icon: "📋" },
+    { label: "Total Applications", value: totalApplications, icon: "📬" },
+    { label: "Total Views", value: totalViews, icon: "👁️" },
+    { label: "Avg Rating", value: avgRating, icon: "⭐" },
   ];
 });
+
+const formatDate = (d: any) => {
+  if (!d) return "";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleDateString();
+};
 
 // Filters
 const selectedJobStatus = ref<"all" | "active" | "closed">("all");
@@ -512,5 +636,14 @@ const statusBadgeColor = (status: string | undefined | null) => {
 const getStatusLabel = (status: string | undefined | null) => {
   if (!status) return "Unknown";
   return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+const canPostJob = computed(() => auth?.role !== "employee");
+
+const getFreelancerAvatar = (f: { avatar?: string; name?: string }) => {
+  const av = f?.avatar;
+  if (!av) return `https://ui-avatars.com/api/?name=${encodeURIComponent(f?.name || "User")}&background=random`;
+  if (av.startsWith("http") || av.startsWith("/")) return av;
+  return `/${av}`;
 };
 </script>

@@ -43,7 +43,7 @@
       </div>
 
       <!-- Poster avatar -->
-      <div class="ml-4 flex-shrink-0">
+      <div v-if="job.postedBy" class="ml-4 flex-shrink-0">
         <img
           :src="job.postedBy.avatar"
           :alt="job.postedBy.name"
@@ -75,20 +75,16 @@ const budgetDisplay = computed(() => {
 });
 
 const postedTimeAgo = computed(() => {
-    // const now = new Date();
-    // const posted = props.job.postedDate;
-    // const diffMs = now.getTime() - posted.getTime();
-    // const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    // const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-    // if (diffDays > 0) {
-    //   return `${diffDays}d ago`;
-    // } else if (diffHours > 0) {
-    //   return `${diffHours}h ago`;
-    // } else {
-    //   return "Just now";
-    // }
-    console.log(props.job)
-    return props.job.created_at;
+  const posted = props.job.postedDate;
+  if (!posted) return props.job?.created_at ?? "";
+  const d = posted instanceof Date ? posted : new Date(posted);
+  if (isNaN(d.getTime())) return props.job?.created_at ?? "";
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffDays > 0) return `${diffDays}d ago`;
+  if (diffHours > 0) return `${diffHours}h ago`;
+  return "Just now";
 });
 </script>

@@ -91,6 +91,20 @@
                   ></textarea>
                 </div>
                 <div class="space-y-2">
+                  <Label for="cv">CV / Resume (optional)</Label>
+                  <input
+                    ref="cvInputRef"
+                    id="cv"
+                    type="file"
+                    accept=".pdf,application/pdf,image/jpeg,image/png,image/gif"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                    @change="onCvSelected"
+                  />
+                  <p class="text-xs text-slate-500">
+                    PDF or image (JPG, PNG, GIF). Max 5MB.
+                  </p>
+                </div>
+                <div class="space-y-2">
                   <Label for="bidAmount">Bid Amount (optional)</Label>
                   <input
                     id="bidAmount"
@@ -281,7 +295,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { Link, usePage, useForm } from "@inertiajs/vue3";
 import Navbar from "@/Components/Navbar.vue";
 import Footer from "@/Components/Footer.vue";
@@ -299,6 +313,7 @@ import {
   DialogClose,
 } from "@/Components/ui/dialog";
 import { Label } from "@/Components/ui/label";
+import { toast } from "vue-sonner";
 
 const props = defineProps<{
   job?: any;
@@ -314,8 +329,23 @@ const hasApplied = props.hasApplied || false;
 
 const applyForm = useForm({
   message: "",
+  cv: null as File | null,
   bidAmount: null as number | null,
 });
+
+const cvInputRef = ref<HTMLInputElement | null>(null);
+
+const onCvSelected = (e: Event) => {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (file && file.size <= 5 * 1024 * 1024) {
+    applyForm.cv = file;
+  } else if (file && file.size > 5 * 1024 * 1024) {
+    applyForm.cv = null;
+    input.value = "";
+    toast.error("File must be 5MB or smaller");
+  }
+};
 
 const postedByAvatarUrl = computed(() => {
   const pb = job?.postedBy;
@@ -329,8 +359,10 @@ const postedByAvatarUrl = computed(() => {
 const submitApply = () => {
   applyForm.post(`/jobs/${job?.id}/apply`, {
     preserveScroll: true,
+    forceFormData: true,
     onSuccess: () => {
       applyForm.reset();
+      cvInputRef.value && (cvInputRef.value.value = "");
     },
   });
 };
