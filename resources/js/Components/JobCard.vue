@@ -25,8 +25,15 @@
 
     <!-- Tags -->
     <div v-if="(job.tags?.length ?? 0) > 0" class="flex flex-wrap gap-2 mb-4">
-      <Badge v-for="tag in (job.tags || []).slice(0, 3)" :key="tag" :label="tag" />
-      <Badge v-if="(job.tags?.length ?? 0) > 3" :label="`+${(job.tags?.length ?? 0) - 3}`" />
+      <Badge
+        v-for="tag in (job.tags || []).slice(0, 3)"
+        :key="tag"
+        :label="tag"
+      />
+      <Badge
+        v-if="(job.tags?.length ?? 0) > 3"
+        :label="`+${(job.tags?.length ?? 0) - 3}`"
+      />
     </div>
 
     <!-- Footer -->
@@ -80,6 +87,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
+console.log(props.job.postedBy);
 const jobUrl = computed(() => {
   const slug = (props.job as any).slug;
   const id = (props.job as any).id;
@@ -98,7 +106,8 @@ const budgetDisplay = computed(() => {
 });
 
 const applicantsCount = computed(
-  () => (props.job as any).applicants_count ?? (props.job as any).applicants ?? 0
+  () =>
+    (props.job as any).applicants_count ?? (props.job as any).applicants ?? 0,
 );
 
 const avatarUrl = computed(() => {

@@ -1,5 +1,5 @@
 import { FormRequest } from "jcc-express-mvc/Core/FormRequest";
-import { ValidationException } from "jcc-express-mvc/lib/Error/ValidationException";
+import { ValidationException } from "jcc-express-mvc/Exception";
 import { Request } from "jcc-express-mvc";
 import { Job } from "@/Model/Job";
 import { Category } from "@/Model/Category";
@@ -26,10 +26,9 @@ export class JobRequest extends FormRequest {
     const budgetMax = parseFloat(this.input("budgetMax") || "0");
     if (budgetMax < budgetMin) {
       console.log("budgetMax < budgetMin");
-      throw new ValidationException(
-        { budgetMax: "Maximum budget must be greater than minimum budget" },
-        this.req,
-      );
+      throw new ValidationException({
+        budgetMax: "Maximum budget must be greater than minimum budget",
+      } as any);
     }
   }
 
@@ -48,10 +47,9 @@ export class JobRequest extends FormRequest {
       if (category) {
         categoryId = (category as any).id;
       } else {
-        throw new ValidationException(
-          { category: "Category not found" },
-          this.req,
-        );
+        throw new ValidationException({
+          category: "Category not found",
+        } as any);
       }
     }
 

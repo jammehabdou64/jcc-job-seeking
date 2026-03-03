@@ -2,15 +2,13 @@ import { httpContext } from "jcc-express-mvc";
 import { Inject, Method } from "jcc-express-mvc/Core/Dependency";
 import { JobRequest } from "@/Request/JobRequest";
 import { Job } from "@/Model/Job";
-import { SavedJob } from "@/Model/SavedJob";
-import { Application } from "@/Model/Application";
-import { JobRepository } from "app/Repository/JobRepository";
+import { JobService } from "@/Services/JobService";
 import { JobInterface } from "@/Model/Interface";
 import { Category } from "@/Model/Category";
 
 @Inject()
 export class JobController {
-  constructor(private jobRepository: JobRepository) {}
+  constructor(private jobService: JobService) {}
 
   async create() {
     const role = auth()?.role;
@@ -30,9 +28,7 @@ export class JobController {
   }
 
   async index() {
-    const result = await this.jobRepository.getJobs();
-    //
-
+    const result = await this.jobService.getJobs();
     return inertia("Jobs/JobListings", {
       jobs: result.data || [],
       meta: result.meta || {},
@@ -45,21 +41,12 @@ export class JobController {
       return redirect("/jobs");
     }
 
-    const authUser = (await this.jobRepository.getAuthUser()) as any;
-    const jobData = await this.jobRepository.showJob(job);
-    const jobId = (job as any).id;
-    const isSaved = authUser
-      ? await this.jobRepository.isJobSaved(authUser.id, jobId)
-      : false;
-    const hasApplied = authUser
-      ? await this.jobRepository.hasApplied(authUser.id, jobId)
-      : false;
-
+    const detail = await this.jobService.getJobDetail(job);
     return inertia("Jobs/JobDetail", {
-      job: jobData,
-      auth: authUser?.toJSON() || {},
-      isSaved: isSaved || false,
-      hasApplied: hasApplied || false,
+      job: detail.job,
+      auth: detail.authUser,
+      isSaved: detail.isSaved,
+      hasApplied: detail.hasApplied,
     });
   }
 
@@ -95,7 +82,7 @@ export class JobController {
     }
 
     const categories = await Category.all();
-    const jobWithRelations = await this.jobRepository.showJob(job);
+    const jobWithRelations = await this.jobService.getJobWithRelations(job);
 
     return res.inertia("Jobs/EditJob", {
       job: jobWithRelations,
@@ -148,30 +135,8 @@ export class JobController {
     const role = (req.user as any)?.role;
     const isEmployee = role === "employee";
 
-    const savedJobs = await this.jobRepository.getSavedJobs(userId);
-
-    if (isEmployee) {
-      const myApplications = await this.jobRepository.getMyApplications(userId);
-      return res.inertia("Dashboard", {
-        myJobs: [],
-        savedJobs: savedJobs || [],
-        applications: [],
-        myApplications: myApplications || [],
-        isEmployee: true,
-      });
-    }
-
-    const jobs = await this.jobRepository.myJobs(userId);
-    const applications =
-      await this.jobRepository.getApplicationsForEmployer(userId);
-
-    return res.inertia("Dashboard", {
-      myJobs: jobs || [],
-      savedJobs: savedJobs || [],
-      applications: applications || [],
-      myApplications: [],
-      isEmployee: false,
-    });
+    const data = await this.jobService.getMyJobsData(userId, isEmployee);
+    return res.inertia("Dashboard", data);
   }
 
   @Method()
@@ -184,14 +149,7 @@ export class JobController {
     const jobSlug = jobModel.slug || jobId;
     const wantsJson =
       req.xhr || req.get("Accept")?.includes("application/json");
-    const existing = await SavedJob.where("user_id", req.user.id)
-      .where("job_id", jobId)
-      .first();
-    if (existing) {
-      if (wantsJson) return res.json({ saved: true });
-      return res.redirect(`/jobs/${jobSlug}`);
-    }
-    await SavedJob.create({ user_id: req.user.id, job_id: jobId });
+    await this.jobService.saveJob(req.user.id, jobId);
     if (wantsJson) return res.json({ saved: true });
     return res.redirect(`/jobs/${jobSlug}`);
   }
@@ -206,9 +164,7 @@ export class JobController {
     const jobSlug = jobModel.slug || jobId;
     const wantsJson =
       req.xhr || req.get("Accept")?.includes("application/json");
-    await SavedJob.where("user_id", req.user.id)
-      .where("job_id", jobId)
-      .delete();
+    await this.jobService.unsaveJob(req.user.id, jobId);
     if (wantsJson) return res.json({ saved: false });
     return res.redirect(`/jobs/${jobSlug}`);
   }
@@ -217,22 +173,10 @@ export class JobController {
   async apply(job: Job) {
     const req = request();
     const res = response();
-
-    const jobModel = job as any;
-    const jobId = jobModel.id;
-    const jobSlug = jobModel.slug || jobId;
-
-    const existing = await Application.where("user_id", auth()?.id)
-      .where("job_id", jobId)
-      .first();
-    if (existing) {
-      return response()
-        .with("info", "You have already applied")
-        .redirect(`/jobs/${jobSlug}`);
-    }
+    const jobModel = job as unknown as JobInterface & { slug?: string };
+    const jobSlug = jobModel.slug || jobModel.id;
 
     let cvPath: string | null = null;
-
     if (req.hasFile("cv")) {
       const fileObj = req.files?.cv;
       const mimetype = (fileObj as any)?.mimetype || "";
@@ -250,18 +194,19 @@ export class JobController {
     const message = req.body?.message || req.input("message") || "";
     const bidAmount =
       parseFloat(req.body?.bidAmount || req.input("bidAmount") || "0") || null;
-    await Application.create({
-      user_id: req.user.id,
-      job_id: jobId,
+
+    const result = await this.jobService.applyToJob(req.user!.id, jobModel, {
       message,
-      bid_amount: bidAmount,
-      status: "pending",
-      cv: cvPath,
+      bidAmount,
+      cvPath,
     });
 
-    await Job.where("id", jobId).update({
-      applicants_count: (jobModel.applicants_count || 0) + 1,
-    });
+    if (result.alreadyApplied) {
+      return response()
+        .with("info", "You have already applied")
+        .redirect(`/jobs/${jobSlug}`);
+    }
+
     return res
       .with("success", "Application submitted successfully")
       .redirect(303, `/jobs`);
